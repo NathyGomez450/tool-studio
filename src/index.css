@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Origem Studio — tema "Escuro elegante" (tokens OKLCH) ---- */
+:root {
+  /* Neutros near-black (chroma baixo, hue 255) */
+  --gray-950: oklch(0.13 0.006 255);
+  --gray-900: oklch(0.17 0.006 255);
+  --gray-850: oklch(0.205 0.006 255);
+  --gray-800: oklch(0.245 0.007 255);
+  --gray-700: oklch(0.33 0.008 255);
+  --gray-600: oklch(0.44 0.008 255);
+  --gray-500: oklch(0.56 0.008 255);
+  --gray-400: oklch(0.67 0.007 255);
+  --gray-300: oklch(0.77 0.006 255);
+  --gray-200: oklch(0.86 0.005 255);
+  --gray-100: oklch(0.92 0.004 255);
+  --gray-50:  oklch(0.97 0.003 255);
+
+  /* Acento: azul profissional (hue 255) */
+  --accent-900: oklch(0.30 0.09 255);
+  --accent-700: oklch(0.44 0.14 255);
+  --accent-600: oklch(0.52 0.16 255);
+  --accent-500: oklch(0.60 0.17 255);
+  --accent-400: oklch(0.70 0.15 255);
+  --accent-300: oklch(0.80 0.10 255);
+
+  /* Semânticos (info em ciano p/ distinguir do acento) */
+  --green-500: oklch(0.62 0.14 155);
+  --green-400: oklch(0.72 0.13 155);
+  --blue-500:  oklch(0.66 0.12 220);
+  --blue-400:  oklch(0.75 0.11 220);
+  --amber-500: oklch(0.76 0.13 75);
+  --amber-400: oklch(0.83 0.11 75);
+  --red-500:   oklch(0.62 0.17 25);
+  --red-400:   oklch(0.71 0.15 25);
+  --violet-500: oklch(0.60 0.15 300);
+  --violet-400: oklch(0.71 0.13 300);
+
+  --bg-canvas: var(--gray-950);
+  --bg-surface: var(--gray-900);
+  --bg-surface-2: var(--gray-850);
+  --bg-surface-3: var(--gray-800);
+  --bg-overlay: oklch(0.13 0.006 255 / 0.72);
+  --bg-hover: oklch(1 0 0 / 0.04);
+  --bg-pressed: oklch(1 0 0 / 0.07);
+
+  --border-subtle: oklch(1 0 0 / 0.06);
+  --border-default: oklch(1 0 0 / 0.10);
+  --border-strong: oklch(1 0 0 / 0.16);
+  --border-focus: var(--accent-400);
+
+  --text-primary: var(--gray-50);
+  --text-secondary: var(--gray-300);
+  --text-tertiary: var(--gray-500);
+  --text-disabled: var(--gray-600);
+  --text-on-accent: oklch(0.98 0 0);
+
+  --accent: var(--accent-500);
+  --accent-hover: var(--accent-400);
+  --accent-active: var(--accent-600);
+  --accent-soft: oklch(0.60 0.17 255 / 0.16);
+  --accent-soft-border: oklch(0.60 0.17 255 / 0.34);
+
+  --success: var(--green-500);
+  --success-soft: oklch(0.62 0.14 155 / 0.15);
+  --success-soft-border: oklch(0.62 0.14 155 / 0.32);
+  --warning: var(--amber-500);
+  --warning-soft: oklch(0.76 0.13 75 / 0.14);
+  --warning-soft-border: oklch(0.76 0.13 75 / 0.30);
+  --danger: var(--red-500);
+  --danger-soft: oklch(0.62 0.17 25 / 0.14);
+  --danger-soft-border: oklch(0.62 0.17 25 / 0.30);
+  --info: var(--blue-500);
+  --info-soft: oklch(0.66 0.12 220 / 0.14);
+  --info-soft-border: oklch(0.66 0.12 220 / 0.30);
+  --creative: var(--violet-500);
+  --creative-soft: oklch(0.60 0.15 300 / 0.14);
+  --creative-soft-border: oklch(0.60 0.15 300 / 0.30);
+
+  --focus-ring: oklch(0.60 0.17 255 / 0.40);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.25);
+  --shadow-md: 0 6px 16px oklch(0 0 0 / 0.24), 0 1px 3px oklch(0 0 0 / 0.20);
+  --shadow-lg: 0 16px 40px oklch(0 0 0 / 0.32), 0 4px 10px oklch(0 0 0 / 0.20);
+  --shadow-focus: 0 0 0 3px var(--focus-ring);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-700); border-radius: 999px; border: 2px solid var(--bg-canvas); }
