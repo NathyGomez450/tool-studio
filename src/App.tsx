@@ -9,10 +9,13 @@ import {
   Boxes,
   Users,
   Search,
+  LogOut,
 } from 'lucide-react';
 import { NavItem } from '@/components/nav-item';
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/auth/auth-context';
 import { Dashboard } from '@/screens/dashboard';
 import { KanbanBoard } from '@/screens/kanban';
 import { Bugs } from '@/screens/bugs';
@@ -21,6 +24,7 @@ import { Roadmap } from '@/screens/roadmap';
 import { Brainstorm } from '@/screens/brainstorm';
 import { Assets } from '@/screens/assets';
 import { Team } from '@/screens/team';
+import { LoginScreen } from '@/screens/login';
 import { useUiStore } from '@/stores/ui-store';
 
 interface NavEntry {
@@ -33,14 +37,14 @@ interface NavEntry {
 
 const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
   {
-    label: 'Visão geral',
+    label: 'Visao geral',
     items: [
       { key: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={16} />, Screen: Dashboard },
       { key: 'roadmap', label: 'Roadmap', icon: <ArrowRight size={16} />, Screen: Roadmap },
     ],
   },
   {
-    label: 'Execução',
+    label: 'Execucao',
     items: [
       { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, badge: 12, Screen: KanbanBoard },
       { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, badge: 4, Screen: Bugs },
@@ -48,7 +52,7 @@ const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
     ],
   },
   {
-    label: 'Documentação',
+    label: 'Documentacao',
     items: [
       { key: 'gdd', label: 'GDD', icon: <BookOpen size={16} />, Screen: Gdd },
       { key: 'assets', label: 'Assets', icon: <Boxes size={16} />, Screen: Assets },
@@ -60,6 +64,7 @@ const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
 const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
 
 export default function App() {
+  const { loading, accessLoading, authorized, accessError, user, signOut } = useAuth();
   const active = useUiStore((s) => s.activeScreen);
   const setActive = useUiStore((s) => s.setActiveScreen);
   const [query, setQuery] = React.useState('');
@@ -70,6 +75,20 @@ export default function App() {
   const groups = NAV_GROUPS
     .map((g) => ({ ...g, items: g.items.filter((i) => i.label.toLowerCase().includes(q)) }))
     .filter((g) => g.items.length > 0);
+
+  if (loading || accessLoading) {
+    return (
+      <div className="h-screen bg-canvas text-tertiary flex items-center justify-center text-[13px]">
+        Validando acesso...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  const displayName = user.user_metadata?.name || user.email || 'Equipe';
 
   return (
     <div className="flex h-screen bg-canvas font-sans">
@@ -85,7 +104,7 @@ export default function App() {
         <div className="px-3 mb-3">
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-tertiary pointer-events-none" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" className="h-8 pl-8 text-[13px]" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="h-8 pl-8 text-[13px]" />
           </div>
         </div>
         <nav className="flex-1 overflow-auto flex flex-col gap-4">
@@ -101,11 +120,22 @@ export default function App() {
         </nav>
         <div className="mt-3 pt-3.5 px-3 border-t border-border-subtle">
           <div className="flex items-center gap-2.5 px-1">
-            <Avatar name="Marina Souza" size={30} />
+            <Avatar name={displayName} size={30} />
             <div className="min-w-0">
-              <div className="text-[13px] font-semibold text-primary truncate">Marina Souza</div>
-              <div className="text-[11px] text-tertiary truncate">Game Designer</div>
+              <div className="text-[13px] font-semibold text-primary truncate">{displayName}</div>
+              <div className="text-[11px] text-tertiary truncate">{user.email}</div>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto w-8 px-0"
+              title="Sair"
+              aria-label="Sair"
+              onClick={() => void signOut()}
+            >
+              <LogOut size={15} />
+            </Button>
           </div>
         </div>
       </aside>
@@ -115,3 +145,4 @@ export default function App() {
     </div>
   );
 }
+
