@@ -4,6 +4,7 @@ import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
 import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
 import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd';
 import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
+import { createBrainstormNote, updateBrainstormNote, deleteBrainstormNote } from '@/api/brainstorm';
 import { type Task, type Bug, type RoadmapItem } from '@/lib/data';
 
 export function useCreateTask(projectId: string) {
@@ -137,5 +138,34 @@ export function useDeleteRoadmapItem(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string }) => deleteRoadmapItem(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
+  });
+}
+
+export function useCreateBrainstormNote(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { text: string; color: string; x: number; y: number }) =>
+      createBrainstormNote(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstorm }),
+  });
+}
+
+export function useUpdateBrainstormNote(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string; text?: string; color?: string; x?: number; y?: number }) =>
+      updateBrainstormNote(projectId, input),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.brainstorm }),
+  });
+}
+
+export function useDeleteBrainstormNote(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string }) => deleteBrainstormNote(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstorm }),
   });
 }

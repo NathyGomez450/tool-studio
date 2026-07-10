@@ -62,6 +62,7 @@ export interface TeamMember {
 }
 
 export interface BrainstormNote {
+  id: string;
   text: string;
   color: string;
   x: number;
