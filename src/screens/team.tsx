@@ -1,25 +1,35 @@
-import { Users } from 'lucide-react';
+import * as React from 'react';
+import { Users, Plus } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useTeam } from '@/queries/hooks';
+import { InviteDialog } from '@/components/dialogs/invite-dialog';
 import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
 import { useAuth } from '@/auth/auth-context';
 
 export function Team() {
-  const { activeProject } = useAuth();
+  const { activeProject, canInvite } = useAuth();
   const projectId = activeProject?.id ?? '';
   const { data: team, isLoading, isError } = useTeam(projectId);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
+
   return (
     <>
-      <TopBar title="Equipe — Origem Studio" subtitle={`${team?.length ?? 0} membros`} icon={<Users size={20} />} iconTone="success" actions={<Button variant="secondary">+ Convidar</Button>} />
+      <TopBar
+        title={`Equipe — ${activeProject?.name ?? 'Projeto'}`}
+        subtitle={`${team?.length ?? 0} membros`}
+        icon={<Users size={20} />}
+        iconTone="success"
+        actions={canInvite ? <Button variant="secondary" onClick={() => setInviteOpen(true)}><Plus size={14} className="mr-1" /> Convidar</Button> : undefined}
+      />
       <div className="flex-1 overflow-auto p-5 px-6">
         {isLoading ? (
           <ScreenLoading />
         ) : isError || !team ? (
           <ScreenError />
         ) : team.length === 0 ? (
-          <ScreenEmpty message="Nenhum membro encontrado." />
+          <ScreenEmpty message="Nenhum membro ainda." />
         ) : (
           <div className="flex flex-col border border-border rounded-md overflow-hidden">
             {team.map((m, i) => (
@@ -35,6 +45,7 @@ export function Team() {
           </div>
         )}
       </div>
+      <InviteDialog projectId={projectId} open={inviteOpen} onOpenChange={setInviteOpen} />
     </>
   );
 }

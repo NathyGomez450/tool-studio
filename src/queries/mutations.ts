@@ -6,6 +6,7 @@ import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd'
 import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
 import { createBrainstormNote, updateBrainstormNote, deleteBrainstormNote } from '@/api/brainstorm';
 import { uploadAsset, deleteAsset } from '@/api/assets';
+import { inviteUser } from '@/api/invites';
 import { type Task, type Bug, type RoadmapItem } from '@/lib/data';
 
 export function useCreateTask(projectId: string) {
@@ -186,5 +187,15 @@ export function useDeleteAsset(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; url: string }) => deleteAsset(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.assets }),
+  });
+}
+
+export function useInviteUser(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { email: string; name?: string; role: 'owner' | 'admin' | 'member' }) =>
+      inviteUser(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.team }),
   });
 }

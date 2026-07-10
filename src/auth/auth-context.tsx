@@ -16,6 +16,7 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   activeProject: ActiveProject | null;
+  canInvite: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -28,10 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessLoading, setAccessLoading] = React.useState(false);
   const [session, setSession] = React.useState<Session | null>(null);
   const [activeProject, setActiveProject] = React.useState<ActiveProject | null>(null);
+  const [canInvite, setCanInvite] = React.useState(false);
   const [accessError, setAccessError] = React.useState('');
 
   async function loadProjectAccess(nextSession: Session | null) {
     setActiveProject(null);
+    setCanInvite(false);
     setAccessError('');
 
     if (!nextSession) return;
@@ -49,6 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccessError('Seu usuario ainda nao esta vinculado ao projeto Origem Studio.');
     } else {
       setActiveProject(data);
+      const { data: membership } = await supabase
+        .from('project_members')
+        .select('role')
+        .eq('project_id', data.id)
+        .eq('user_id', nextSession.user.id)
+        .maybeSingle();
+      setCanInvite(membership?.role === 'owner' || membership?.role === 'admin');
     }
 
     setAccessLoading(false);
@@ -85,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       activeProject,
+      canInvite,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -94,10 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
         setSession(null);
         setActiveProject(null);
+        setCanInvite(false);
         setAccessError('');
       },
     }),
-    [accessError, accessLoading, activeProject, loading, session],
+    [accessError, accessLoading, activeProject, canInvite, loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
