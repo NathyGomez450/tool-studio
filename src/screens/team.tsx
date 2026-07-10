@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Users, Plus } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { useTeam } from '@/queries/hooks';
 import { InviteDialog } from '@/components/dialogs/invite-dialog';
@@ -36,7 +37,14 @@ export function Team() {
               <div key={m.name} className={`flex items-center gap-3 px-4 py-3.5 bg-surface transition-colors hover:bg-[var(--bg-hover)] ${i > 0 ? 'border-t border-border-subtle' : ''}`}>
                 <Avatar name={m.name} size={34} />
                 <div className="flex-1">
-                  <div className="text-[13px] font-semibold text-primary">{m.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-primary">{m.name}</span>
+                    {m.pending ? (
+                      <Badge tone="warning">Convite pendente</Badge>
+                    ) : (
+                      <Badge tone="success">Ativo</Badge>
+                    )}
+                  </div>
                   <div className="text-xs text-tertiary">{m.role}</div>
                 </div>
                 <div className="text-xs font-mono text-secondary">{m.tasks} tarefas ativas</div>

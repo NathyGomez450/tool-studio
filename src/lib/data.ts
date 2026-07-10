@@ -61,6 +61,7 @@ export interface TeamMember {
   name: string;
   role: string;
   tasks: number;
+  pending: boolean;
 }
 
 export interface BrainstormNote {

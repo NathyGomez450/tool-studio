@@ -13,7 +13,7 @@ export async function fetchTeam(projectId: string): Promise<TeamMember[]> {
   for (const m of members ?? []) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('name')
+      .select('name, confirmed')
       .eq('id', m.user_id)
       .single();
 
@@ -25,7 +25,7 @@ export async function fetchTeam(projectId: string): Promise<TeamMember[]> {
       .eq('project_id', projectId)
       .contains('assignee_names', [name]);
 
-    team.push({ name, role: m.role as string, tasks: count ?? 0 });
+    team.push({ name, role: m.role as string, tasks: count ?? 0, pending: !profile?.confirmed });
   }
 
   return team;

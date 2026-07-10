@@ -18,12 +18,14 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 alter table public.profiles add column if not exists email text;
+-- confirmed = usuário já fez login ao menos uma vez (aceitou o convite)
+alter table public.profiles add column if not exists confirmed boolean not null default false;
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', new.email))
+  insert into public.profiles (id, email, name, confirmed)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', new.email), new.last_sign_in_at is not null)
   on conflict (id) do update set email = excluded.email;
   return new;
 end; $$;
@@ -33,6 +35,21 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 -- handle_new_user é só trigger; não deve ser chamável via RPC
 revoke execute on function public.handle_new_user() from anon, authenticated;
+
+-- Ao fazer login (last_sign_in_at setado), marca o profile como confirmado
+create or replace function public.handle_user_confirmed()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.last_sign_in_at is not null then
+    update public.profiles set confirmed = true where id = new.id;
+  end if;
+  return new;
+end; $$;
+revoke execute on function public.handle_user_confirmed() from anon, authenticated;
+
+drop trigger if exists on_auth_user_confirmed on auth.users;
+create trigger on_auth_user_confirmed after update on auth.users
+  for each row execute function public.handle_user_confirmed();
 
 -- ---------- 2. PROJECT_MEMBERS: tabela + check de papel ----------
 create table if not exists public.project_members (
@@ -125,9 +142,9 @@ where not exists (
 );
 
 -- ---------- 10. Bootstrap: profiles + nathy como owner ----------
-insert into public.profiles (id, email, name)
-  select id, email, coalesce(raw_user_meta_data->>'name', email) from auth.users
-  on conflict (id) do update set email = excluded.email;
+insert into public.profiles (id, email, name, confirmed)
+  select id, email, coalesce(raw_user_meta_data->>'name', email), last_sign_in_at is not null from auth.users
+  on conflict (id) do update set email = excluded.email, confirmed = excluded.confirmed;
 insert into public.project_members (project_id, user_id, role)
   select (select id from public.projects where slug='origem-studio'), u.id, 'owner'
   from auth.users u where u.email = 'nathy@origemstudio.com.br'
