@@ -5,6 +5,7 @@ import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
 import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd';
 import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
 import { createBrainstormNote, updateBrainstormNote, deleteBrainstormNote } from '@/api/brainstorm';
+import { uploadAsset, deleteAsset } from '@/api/assets';
 import { type Task, type Bug, type RoadmapItem } from '@/lib/data';
 
 export function useCreateTask(projectId: string) {
@@ -167,5 +168,23 @@ export function useDeleteBrainstormNote(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string }) => deleteBrainstormNote(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstorm }),
+  });
+}
+
+export function useUploadAsset(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { file: File; type: string }) => uploadAsset(projectId, input.file, { type: input.type }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.assets }),
+  });
+}
+
+export function useDeleteAsset(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string; url: string }) => deleteAsset(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.assets }),
   });
 }

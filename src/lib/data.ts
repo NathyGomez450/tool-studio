@@ -49,10 +49,12 @@ export interface GddSection {
 }
 
 export interface Asset {
+  id: string;
   name: string;
   type: string;
   size: string;
   by: string;
+  url: string;
 }
 
 export interface TeamMember {

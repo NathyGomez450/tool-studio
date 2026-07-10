@@ -16,6 +16,14 @@ export function hueFor(name: string) {
   return h;
 }
 
+/** Formata bytes em "4.2 MB", "112 KB", etc. */
+export function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, i)).toFixed(i ? 1 : 0)} ${units[i]}`;
+}
+
 /** Converte timestamp ISO para "há 2h", "há 3d", etc. */
 export function formatTimeAgo(dateStr: string): string {
   const now = Date.now();
