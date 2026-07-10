@@ -35,6 +35,7 @@ export interface RoadmapQuarter {
 }
 
 export interface GddSection {
+  id: string;
   key: string;
   label: string;
   title: string;

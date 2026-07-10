@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
 import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
+import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd';
 import { type Task, type Bug } from '@/lib/data';
 
 export function useCreateTask(projectId: string) {
@@ -79,5 +80,32 @@ export function useDeleteBug(projectId: string) {
   return useMutation({
     mutationFn: (input: { bugId: string }) => deleteBug(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
+  });
+}
+
+export function useCreateGddSection(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { title: string; body: string }) => createGddSection(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
+  });
+}
+
+export function useUpdateGddSection(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string; title: string; body: string }) => updateGddSection(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
+  });
+}
+
+export function useDeleteGddSection(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string }) => deleteGddSection(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
   });
 }
