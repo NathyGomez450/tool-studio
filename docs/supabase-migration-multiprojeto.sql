@@ -1,14 +1,16 @@
 -- =============================================================
 -- Origem Studio — Migração Multi-projeto (reconciliação com banco real)
 -- Projeto Supabase: tool-studio (ylovhjbncdmoibeoandi)
--- Estado verificado em 2026-07-09: híbrido meio-migrado, tabelas de
--- conteúdo sem project_id, profiles sem email, roadmap_items com due_date,
--- projects/profiles vazias, 1 linha órfã em project_members.
--- Idempotente. Aplicar via Supabase (SQL Editor ou MCP apply_migration).
+-- Aplicada com sucesso em 2026-07-09 via Supabase MCP (apply_migration).
+-- Estado de origem: híbrido meio-migrado (profiles sem email, roadmap_items
+-- com due_date sem quarter, tabelas de conteúdo sem project_id,
+-- projects/profiles vazias, 1 linha órfã em project_members,
+-- funções is_project_* pré-existentes com parâmetro 'target_project_id').
+-- Idempotente. begin/commit para uso no SQL Editor (o MCP é atômico por si).
 -- =============================================================
 begin;
 
--- ---------- 1. PROFILES: garantir tabela + coluna email + trigger ----------
+-- ---------- 1. PROFILES: tabela + coluna email + trigger ----------
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   name       text,
@@ -27,11 +29,10 @@ begin
 end; $$;
 
 drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
+create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ---------- 2. PROJECT_MEMBERS: garantir + check de papel ----------
+-- ---------- 2. PROJECT_MEMBERS: tabela + check de papel ----------
 create table if not exists public.project_members (
   project_id uuid not null references public.projects(id) on delete cascade,
   user_id    uuid not null references auth.users(id) on delete cascade,
@@ -69,9 +70,7 @@ create sequence if not exists public.task_display_seq start with 200;
 create or replace function public.generate_task_display_id()
 returns trigger language plpgsql as $$
 begin
-  if new.display_id is null then
-    new.display_id := 'TASK-' || nextval('public.task_display_seq');
-  end if;
+  if new.display_id is null then new.display_id := 'TASK-' || nextval('public.task_display_seq'); end if;
   return new;
 end; $$;
 drop trigger if exists tasks_display_id_trigger on public.tasks;
@@ -84,22 +83,19 @@ create sequence if not exists public.bug_display_seq start with 2240;
 create or replace function public.generate_bug_display_id()
 returns trigger language plpgsql as $$
 begin
-  if new.display_id is null then
-    new.display_id := 'BUG-' || nextval('public.bug_display_seq');
-  end if;
+  if new.display_id is null then new.display_id := 'BUG-' || nextval('public.bug_display_seq'); end if;
   return new;
 end; $$;
 drop trigger if exists bugs_display_id_trigger on public.bugs;
 create trigger bugs_display_id_trigger before insert on public.bugs
   for each row execute function public.generate_bug_display_id();
 
--- ---------- 6. ROADMAP_ITEMS: adicionar quarter (código agrupa por quarter) ----------
+-- ---------- 6. ROADMAP_ITEMS: quarter; dropar modelos antigos ----------
 alter table public.roadmap_items add column if not exists quarter text;
--- roadmap_quarters (modelo antigo) e team_members (fictício) saem
 drop table if exists public.roadmap_quarters cascade;
 drop table if exists public.team_members cascade;
 
--- ---------- 7. Unicidade por projeto (não global) ----------
+-- ---------- 7. Unicidade por projeto ----------
 alter table public.kanban_columns drop constraint if exists kanban_columns_key_key;
 alter table public.gdd_sections   drop constraint if exists gdd_sections_key_key;
 create unique index if not exists kanban_columns_project_key on public.kanban_columns(project_id, key);
@@ -108,53 +104,31 @@ create unique index if not exists gdd_sections_project_key   on public.gdd_secti
 -- ---------- 8. Projeto origem-studio + limpeza da linha órfã ----------
 insert into public.projects (name, slug) values ('Origem Studio','origem-studio')
   on conflict (slug) do nothing;
-
--- Remove vínculos que apontam para projetos inexistentes (linha órfã do jvtt)
 delete from public.project_members pm
   where not exists (select 1 from public.projects p where p.id = pm.project_id);
 
--- ---------- 9. Semear colunas do Kanban para o origem-studio ----------
+-- ---------- 9. Semear colunas do Kanban ----------
 insert into public.kanban_columns (key, label, position, project_id)
 select v.key, v.label, v.position, (select id from public.projects where slug='origem-studio')
 from (values
-  ('backlog','Backlog',0),
-  ('todo','A Fazer',1),
-  ('doing','Em Progresso',2),
-  ('review','Revisão',3),
-  ('done','Concluído',4)
+  ('backlog','Backlog',0),('todo','A Fazer',1),('doing','Em Progresso',2),
+  ('review','Revisão',3),('done','Concluído',4)
 ) as v(key,label,position)
 where not exists (
   select 1 from public.kanban_columns kc
-  where kc.project_id = (select id from public.projects where slug='origem-studio')
-    and kc.key = v.key
+  where kc.project_id = (select id from public.projects where slug='origem-studio') and kc.key = v.key
 );
 
--- ---------- 10. Bootstrap: profiles (2 usuários) + nathy como owner ----------
+-- ---------- 10. Bootstrap: profiles + nathy como owner ----------
 insert into public.profiles (id, email, name)
   select id, email, coalesce(raw_user_meta_data->>'name', email) from auth.users
   on conflict (id) do update set email = excluded.email;
-
 insert into public.project_members (project_id, user_id, role)
   select (select id from public.projects where slug='origem-studio'), u.id, 'owner'
-  from auth.users u
-  where u.email = 'nathy@origemstudio.com.br'
+  from auth.users u where u.email = 'nathy@origemstudio.com.br'
   on conflict (project_id, user_id) do update set role = 'owner';
 
--- ---------- 11. Funções de acesso ----------
-create or replace function public.is_project_member(pid uuid)
-returns boolean language sql security definer stable set search_path = public as $$
-  select exists (select 1 from public.project_members
-                 where project_id = pid and user_id = auth.uid());
-$$;
-
-create or replace function public.is_project_admin(pid uuid)
-returns boolean language sql security definer stable set search_path = public as $$
-  select exists (select 1 from public.project_members
-                 where project_id = pid and user_id = auth.uid()
-                   and role in ('owner','admin'));
-$$;
-
--- ---------- 12. RLS: limpar policies antigas e recriar ----------
+-- ---------- 11. RLS: habilitar ----------
 alter table public.profiles         enable row level security;
 alter table public.project_members  enable row level security;
 alter table public.projects         enable row level security;
@@ -166,7 +140,7 @@ alter table public.gdd_sections     enable row level security;
 alter table public.assets           enable row level security;
 alter table public.brainstorm_notes enable row level security;
 
--- Dropar TODAS as policies existentes no schema public (name-agnostic)
+-- ---------- 12. Dropar TODAS as policies public (remove deps das funções) ----------
 do $$
 declare r record;
 begin
@@ -175,7 +149,21 @@ begin
   end loop;
 end $$;
 
--- Tabelas de conteúdo: acesso só para membros do projeto
+-- ---------- 13. Substituir funções de acesso ----------
+-- (as versões antigas usavam o parâmetro 'target_project_id'; drop antes de recriar)
+drop function if exists public.is_project_member(uuid);
+drop function if exists public.is_project_admin(uuid);
+create function public.is_project_member(pid uuid)
+returns boolean language sql security definer stable set search_path = public as $$
+  select exists (select 1 from public.project_members where project_id = pid and user_id = auth.uid());
+$$;
+create function public.is_project_admin(pid uuid)
+returns boolean language sql security definer stable set search_path = public as $$
+  select exists (select 1 from public.project_members where project_id = pid and user_id = auth.uid()
+                   and role in ('owner','admin'));
+$$;
+
+-- ---------- 14. Recriar policies ----------
 create policy "members manage tasks"           on public.tasks            for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
 create policy "members manage bugs"            on public.bugs             for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
 create policy "members manage kanban_columns"  on public.kanban_columns   for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
@@ -183,17 +171,11 @@ create policy "members manage gdd_sections"    on public.gdd_sections     for al
 create policy "members manage assets"          on public.assets           for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
 create policy "members manage brainstorm"      on public.brainstorm_notes for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
 create policy "members manage roadmap"         on public.roadmap_items    for all using (public.is_project_member(project_id)) with check (public.is_project_member(project_id));
-
--- Projects: leitura para membros
 create policy "members read projects" on public.projects for select using (public.is_project_member(id));
-
--- project_members: leitura para membros; escrita só owner/admin
 create policy "members read members"  on public.project_members for select using (public.is_project_member(project_id));
 create policy "admins insert members" on public.project_members for insert with check (public.is_project_admin(project_id));
 create policy "admins update members" on public.project_members for update using (public.is_project_admin(project_id));
 create policy "admins delete members" on public.project_members for delete using (public.is_project_admin(project_id));
-
--- profiles: leitura do próprio e de quem compartilha projeto
 create policy "read own and shared profiles" on public.profiles for select using (
   id = auth.uid()
   or exists (
