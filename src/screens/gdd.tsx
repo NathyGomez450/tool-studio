@@ -3,7 +3,7 @@ import { BookOpen } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { type GddSection } from '@/lib/data';
 import { useGddSections } from '@/queries/hooks';
-import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
 import { useAuth } from '@/auth/auth-context';
 
 export function Gdd() {

@@ -10,7 +10,7 @@ export async function fetchBrainstormNotes(projectId: string): Promise<Brainstor
   if (error) throw error;
 
   return (data ?? []).map((n) => ({
-    text: n.title as string,
+    text: n.text as string,
     color: (n.color as string) ?? 'accent',
     x: (n.x as number) ?? 0,
     y: (n.y as number) ?? 0,

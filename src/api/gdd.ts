@@ -6,7 +6,7 @@ export async function fetchGddSections(projectId: string): Promise<GddSection[]>
     .from('gdd_sections')
     .select('*')
     .eq('project_id', projectId)
-    .order('position');
+    .order('key');
 
   if (error) throw error;
 
@@ -14,6 +14,6 @@ export async function fetchGddSections(projectId: string): Promise<GddSection[]>
     key: (s.key as string) ?? s.id as string,
     label: (s.label as string) ?? (s.title as string),
     title: s.title as string,
-    body: (s.content as string) ?? '',
+    body: (s.body as string) ?? '',
   }));
 }

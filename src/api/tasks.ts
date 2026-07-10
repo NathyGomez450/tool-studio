@@ -39,7 +39,7 @@ export async function fetchColumns(projectId: string): Promise<Column[]> {
 
   return (cols ?? []).map((c) => ({
     key: c.key as string,
-    label: c.title as string,
+    label: c.label as string,
     tasks: byCol.get(c.id as string) ?? [],
   }));
 }
