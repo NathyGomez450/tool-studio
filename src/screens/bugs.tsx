@@ -12,6 +12,7 @@ import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-sta
 import { BugDialog } from '@/components/dialogs/bug-dialog';
 import { FilterBar } from '@/components/filter-bar';
 import { useFilterStore } from '@/stores/filter-store';
+import { useAuth } from '@/auth/auth-context';
 
 const sevTone: Record<Bug['severity'], any> = { critical: 'danger', high: 'warning', medium: 'info', low: 'neutral' };
 const STATUS_OPTIONS: { value: Bug['status']; label: string }[] = [
@@ -38,9 +39,11 @@ const STATUS_FILTER_OPTIONS = [
 type DialogState = null | { mode: 'create' } | { mode: 'edit'; bug: Bug };
 
 export function Bugs() {
-  const { data: bugs, isLoading, isError } = useBugs();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: bugs, isLoading, isError } = useBugs(projectId);
   const [dialog, setDialog] = React.useState<DialogState>(null);
-  const updateStatus = useUpdateBugStatus();
+  const updateStatus = useUpdateBugStatus(projectId);
 
   const filter = useFilterStore((s) => s.bugs);
   const setFilter = useFilterStore((s) => s.setBugsFilter);
@@ -50,7 +53,7 @@ export function Bugs() {
 
   function matchBug(b: Bug): boolean {
     const q = filter.text.trim().toLowerCase();
-    if (q && !`${b.title} ${b.id}`.toLowerCase().includes(q)) return false;
+    if (q && !`${b.title} ${b.displayId}`.toLowerCase().includes(q)) return false;
     if (filter.severity && b.severity !== filter.severity) return false;
     if (filter.status && b.status !== filter.status) return false;
     if (filter.assignee && b.assignee !== filter.assignee) return false;
@@ -116,7 +119,7 @@ export function Bugs() {
                 key={b.id}
                 className={`grid grid-cols-[110px_1fr_110px_130px_130px_90px] px-4 py-3 items-center bg-surface ${i > 0 ? 'border-t border-border-subtle' : ''}`}
               >
-                <div className="font-mono text-xs text-tertiary">{b.id}</div>
+                <div className="font-mono text-xs text-tertiary">{b.displayId}</div>
                 <div
                   className="text-[13px] text-primary font-medium cursor-pointer hover:text-accent"
                   onClick={() => setDialog({ mode: 'edit', bug: b })}
@@ -154,6 +157,7 @@ export function Bugs() {
       <BugDialog
         open={dialog !== null}
         bug={dialog?.mode === 'edit' ? dialog.bug : undefined}
+        projectId={projectId}
         onOpenChange={(v) => { if (!v) setDialog(null); }}
       />
     </>

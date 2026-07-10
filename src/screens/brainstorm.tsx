@@ -2,7 +2,8 @@ import { Sparkles } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { useBrainstormNotes } from '@/queries/hooks';
-import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import { useAuth } from '@/auth/auth-context';
 
 const toneBg: Record<string, string> = {
   creative: 'var(--creative-soft)',
@@ -18,7 +19,9 @@ const toneBorder: Record<string, string> = {
 };
 
 export function Brainstorm() {
-  const { data: brainstormNotes, isLoading, isError } = useBrainstormNotes();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: brainstormNotes, isLoading, isError } = useBrainstormNotes(projectId);
   return (
     <>
       <TopBar title="Brainstorm — Skyline Racer" subtitle="Board livre de ideias" icon={<Sparkles size={20} />} iconTone="warning" actions={<Button variant="secondary">+ Nota</Button>} />
@@ -30,6 +33,8 @@ export function Brainstorm() {
           <ScreenLoading />
         ) : isError || !brainstormNotes ? (
           <ScreenError />
+        ) : brainstormNotes.length === 0 ? (
+          <ScreenEmpty message="Nenhuma nota no brainstorm." />
         ) : (
           brainstormNotes.map((n, i) => (
             <div
@@ -38,8 +43,8 @@ export function Brainstorm() {
               style={{
                 left: n.x,
                 top: n.y,
-                background: toneBg[n.color],
-                borderColor: toneBorder[n.color],
+                background: toneBg[n.color] ?? toneBg.accent,
+                borderColor: toneBorder[n.color] ?? toneBorder.accent,
                 transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (1 + (i % 3))}deg)`,
               }}
             >

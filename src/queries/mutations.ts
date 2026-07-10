@@ -2,67 +2,82 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
 import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
+import { type Task, type Bug } from '@/lib/data';
 
-export function useCreateTask() {
+export function useCreateTask(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: createTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.columns }),
+    mutationFn: (input: { title: string; priority: Task['priority']; tag?: string }) =>
+      createTask(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.columns }),
   });
 }
 
-export function useCreateBug() {
+export function useCreateBug(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: createBug,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bugs }),
+    mutationFn: (input: { title: string; severity: Bug['severity'] }) =>
+      createBug(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
   });
 }
 
-export function useUpdateBugStatus() {
+export function useUpdateBugStatus(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: updateBugStatus,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bugs }),
+    mutationFn: (input: { bugId: string; status: Bug['status'] }) =>
+      updateBugStatus(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
   });
 }
 
-export function useMoveTask() {
+export function useMoveTask(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: moveTask,
-    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.columns }),
+    mutationFn: (input: { taskId: string; toColumnKey: string; toIndex: number }) =>
+      moveTask(projectId, input),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.columns }),
   });
 }
 
-export function useUpdateTask() {
+export function useUpdateTask(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: updateTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.columns }),
+    mutationFn: (input: { taskId: string; title: string; priority: Task['priority']; tags: string[] }) =>
+      updateTask(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.columns }),
   });
 }
 
-export function useDeleteTask() {
+export function useDeleteTask(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.columns }),
+    mutationFn: (input: { taskId: string }) => deleteTask(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.columns }),
   });
 }
 
-export function useUpdateBug() {
+export function useUpdateBug(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: updateBug,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bugs }),
+    mutationFn: (input: { bugId: string; title: string; severity: Bug['severity'] }) =>
+      updateBug(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
   });
 }
 
-export function useDeleteBug() {
+export function useDeleteBug(projectId: string) {
   const qc = useQueryClient();
+  const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: deleteBug,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.bugs }),
+    mutationFn: (input: { bugId: string }) => deleteBug(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
   });
 }

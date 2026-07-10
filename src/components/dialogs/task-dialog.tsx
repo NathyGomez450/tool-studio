@@ -13,15 +13,25 @@ const PRIORITIES: { value: Task['priority']; label: string }[] = [
   { value: 'critical', label: 'Crítica' },
 ];
 
-export function TaskDialog({ open, onOpenChange, task }: { open: boolean; onOpenChange: (v: boolean) => void; task?: Task }) {
+export function TaskDialog({
+  open,
+  onOpenChange,
+  task,
+  projectId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  task?: Task;
+  projectId: string;
+}) {
   const isEdit = !!task;
   const [title, setTitle] = React.useState('');
   const [priority, setPriority] = React.useState<Task['priority']>('medium');
   const [tags, setTags] = React.useState('');
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
-  const createTask = useCreateTask();
-  const updateTask = useUpdateTask();
-  const deleteTask = useDeleteTask();
+  const createTask = useCreateTask(projectId);
+  const updateTask = useUpdateTask(projectId);
+  const deleteTask = useDeleteTask(projectId);
 
   // Sincroniza o formulário quando abre em modo edição (ou reseta ao criar).
   React.useEffect(() => {

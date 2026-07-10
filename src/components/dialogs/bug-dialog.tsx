@@ -13,14 +13,24 @@ const SEVERITIES: { value: Bug['severity']; label: string }[] = [
   { value: 'critical', label: 'Crítica' },
 ];
 
-export function BugDialog({ open, onOpenChange, bug }: { open: boolean; onOpenChange: (v: boolean) => void; bug?: Bug }) {
+export function BugDialog({
+  open,
+  onOpenChange,
+  bug,
+  projectId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  bug?: Bug;
+  projectId: string;
+}) {
   const isEdit = !!bug;
   const [title, setTitle] = React.useState('');
   const [severity, setSeverity] = React.useState<Bug['severity']>('medium');
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
-  const createBug = useCreateBug();
-  const updateBug = useUpdateBug();
-  const deleteBug = useDeleteBug();
+  const createBug = useCreateBug(projectId);
+  const updateBug = useUpdateBug(projectId);
+  const deleteBug = useDeleteBug(projectId);
 
   React.useEffect(() => {
     if (open) {

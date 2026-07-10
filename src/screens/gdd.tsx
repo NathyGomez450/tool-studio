@@ -4,13 +4,16 @@ import { TopBar } from '@/components/top-bar';
 import { type GddSection } from '@/lib/data';
 import { useGddSections } from '@/queries/hooks';
 import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { useAuth } from '@/auth/auth-context';
 
 export function Gdd() {
-  const { data: gddSections, isLoading, isError } = useGddSections();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: gddSections, isLoading, isError } = useGddSections(projectId);
   if (isLoading) {
     return (
       <>
-        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição: Ana Prado · há 3h" icon={<BookOpen size={20} />} iconTone="creative" />
+        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
         <div className="flex-1 overflow-auto">
           <ScreenLoading />
         </div>
@@ -20,7 +23,7 @@ export function Gdd() {
   if (isError || !gddSections) {
     return (
       <>
-        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição: Ana Prado · há 3h" icon={<BookOpen size={20} />} iconTone="creative" />
+        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
         <div className="flex-1 overflow-auto">
           <ScreenError />
         </div>
@@ -31,11 +34,14 @@ export function Gdd() {
 }
 
 function GddContent({ sections }: { sections: GddSection[] }) {
-  const [active, setActive] = React.useState('mecanicas');
-  const section = sections.find((s) => s.key === active)!;
+  const [active, setActive] = React.useState(sections[0]?.key ?? '');
+  const section = sections.find((s) => s.key === active) ?? sections[0];
+
+  if (!section) return <ScreenEmpty message="Nenhuma seção encontrada." />;
+
   return (
     <>
-      <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição: Ana Prado · há 3h" icon={<BookOpen size={20} />} iconTone="creative" />
+      <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
       <div className="flex-1 flex min-h-0">
         <div className="w-[220px] border-r border-border-subtle p-4 px-2 flex flex-col gap-0.5 shrink-0">
           {sections.map((s) => (

@@ -3,18 +3,23 @@ import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { useTeam } from '@/queries/hooks';
-import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import { useAuth } from '@/auth/auth-context';
 
 export function Team() {
-  const { data: team, isLoading, isError } = useTeam();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: team, isLoading, isError } = useTeam(projectId);
   return (
     <>
-      <TopBar title="Equipe — Origem Studio" subtitle="5 membros" icon={<Users size={20} />} iconTone="success" actions={<Button variant="secondary">+ Convidar</Button>} />
+      <TopBar title="Equipe — Origem Studio" subtitle={`${team?.length ?? 0} membros`} icon={<Users size={20} />} iconTone="success" actions={<Button variant="secondary">+ Convidar</Button>} />
       <div className="flex-1 overflow-auto p-5 px-6">
         {isLoading ? (
           <ScreenLoading />
         ) : isError || !team ? (
           <ScreenError />
+        ) : team.length === 0 ? (
+          <ScreenEmpty message="Nenhum membro encontrado." />
         ) : (
           <div className="flex flex-col border border-border rounded-md overflow-hidden">
             {team.map((m, i) => (

@@ -33,7 +33,7 @@ export function KanbanCard({ task, className, onEdit }: { task: Task; className?
       )}
     >
       <div className="flex justify-between items-center">
-        <span className="font-mono text-[11px] text-tertiary">{task.id}</span>
+        <span className="font-mono text-[11px] text-tertiary">{task.displayId}</span>
       </div>
       <div className="text-[13px] font-medium text-primary leading-snug">{task.title}</div>
       {task.tags.length > 0 && (

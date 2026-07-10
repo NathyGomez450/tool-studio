@@ -2,9 +2,9 @@ import { LayoutDashboard, ListChecks, Bug, Activity, Flag } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { Card } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress';
-import { Avatar } from '@/components/ui/avatar';
 import { useDashboard } from '@/queries/hooks';
 import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { useAuth } from '@/auth/auth-context';
 
 const STAT_ICONS = [
   <ListChecks size={16} />,
@@ -27,7 +27,9 @@ function barTone(v: number): 'success' | 'accent' | 'warning' {
 }
 
 export function Dashboard() {
-  const { data, isLoading, isError } = useDashboard();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data, isLoading, isError } = useDashboard(projectId);
   return (
     <>
       <TopBar title="Painel — Skyline Racer" subtitle="Visão geral do projeto" icon={<LayoutDashboard size={20} />} />
@@ -49,39 +51,42 @@ export function Dashboard() {
                 </Card>
               ))}
             </div>
-            <div className="grid grid-cols-[1.4fr_1fr] gap-4">
-              <Card>
-                <div className="text-[13px] font-semibold text-primary mb-3.5">Progresso do sprint 14</div>
-                <div className="flex flex-col gap-3">
-                  {data.sprint.map((p) => (
-                    <div key={p.label}>
-                      <div className="flex justify-between text-xs text-secondary mb-1.5">
-                        <span>{p.label}</span>
-                        <span className="font-mono text-tertiary">{p.value}%</span>
+            {data.sprint.length > 0 && (
+              <div className="grid grid-cols-[1.4fr_1fr] gap-4">
+                <Card>
+                  <div className="text-[13px] font-semibold text-primary mb-3.5">Progresso do sprint 14</div>
+                  <div className="flex flex-col gap-3">
+                    {data.sprint.map((p) => (
+                      <div key={p.label}>
+                        <div className="flex justify-between text-xs text-secondary mb-1.5">
+                          <span>{p.label}</span>
+                          <span className="font-mono text-tertiary">{p.value}%</span>
+                        </div>
+                        <ProgressBar value={p.value} tone={barTone(p.value)} />
                       </div>
-                      <ProgressBar value={p.value} tone={barTone(p.value)} />
+                    ))}
+                  </div>
+                </Card>
+                {data.activity.length > 0 && (
+                  <Card>
+                    <div className="text-[13px] font-semibold text-primary mb-3.5">Atividade recente</div>
+                    <div className="flex flex-col">
+                      {data.activity.map((a) => (
+                        <div
+                          key={a.when + a.who}
+                          className="flex gap-2.5 items-start py-2.5 border-t border-border-subtle first:border-t-0 first:pt-0"
+                        >
+                          <div className="text-xs text-secondary leading-relaxed min-w-0">
+                            <span className="text-primary font-semibold">{a.who}</span> {a.what}
+                            <div className="text-disabled text-[11px] mt-1">{a.when}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </Card>
-              <Card>
-                <div className="text-[13px] font-semibold text-primary mb-3.5">Atividade recente</div>
-                <div className="flex flex-col">
-                  {data.activity.map((a) => (
-                    <div
-                      key={a.when + a.who}
-                      className="flex gap-2.5 items-start py-2.5 border-t border-border-subtle first:border-t-0 first:pt-0"
-                    >
-                      <Avatar name={a.who} size={26} />
-                      <div className="text-xs text-secondary leading-relaxed min-w-0">
-                        <span className="text-primary font-semibold">{a.who}</span> {a.what}
-                        <div className="text-disabled text-[11px] mt-1">{a.when}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
+                  </Card>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

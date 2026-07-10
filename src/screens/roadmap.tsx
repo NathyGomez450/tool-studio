@@ -3,7 +3,8 @@ import { TopBar } from '@/components/top-bar';
 import { Badge } from '@/components/ui/badge';
 import { type RoadmapQuarter } from '@/lib/data';
 import { useRoadmap } from '@/queries/hooks';
-import { ScreenLoading, ScreenError } from '@/components/screen-state';
+import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import { useAuth } from '@/auth/auth-context';
 
 const statusTone: Record<RoadmapQuarter['status'], any> = { 'em andamento': 'accent', planejado: 'neutral', 'concluído': 'success' };
 const bulletColor: Record<RoadmapQuarter['status'], string> = {
@@ -13,15 +14,19 @@ const bulletColor: Record<RoadmapQuarter['status'], string> = {
 };
 
 export function Roadmap() {
-  const { data: roadmap, isLoading, isError } = useRoadmap();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: roadmap, isLoading, isError } = useRoadmap(projectId);
   return (
     <>
-      <TopBar title="Roadmap — Skyline Racer" subtitle="Próximos 3 trimestres" icon={<ArrowRight size={20} />} iconTone="success" />
+      <TopBar title="Roadmap — Skyline Racer" subtitle="Próximos trimestres" icon={<ArrowRight size={20} />} iconTone="success" />
       <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
           <ScreenLoading />
         ) : isError || !roadmap ? (
           <ScreenError />
+        ) : roadmap.length === 0 ? (
+          <ScreenEmpty message="Nenhum item no roadmap." />
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {roadmap.map((r) => (
