@@ -19,22 +19,36 @@ O código de `trabalho-local` foi escrito para um schema que **não existe** no 
 
 1. Fazer a branch multi-projeto **buildar e rodar** contra um banco migrado.
 2. Adicionar **convite por email** (admin convida → pessoa define senha → acessa), eliminando a criação manual de usuários no painel do Supabase.
+3. Dar **backend funcional (CRUD)** às páginas hoje só de leitura: **GDD, Roadmap, Brainstorm e Assets** (Assets com upload real via Supabase Storage).
 
-Design cobre as duas fases; a implementação pode ser faseada (Fase 1: multi-projeto rodando; Fase 2: convite).
+Design cobre três fases; a implementação pode ser faseada (Fase 1: multi-projeto rodando; Fase 2: convite; Fase 3: CRUD das páginas).
 
 ## Decisões tomadas
 
 | Tema | Decisão |
 |---|---|
-| Estado do banco hoje | Schema flat do `main` aplicado (sem `project_id`) → escrever **migração incremental** |
+| Estado do banco hoje | **Híbrido meio-migrado** (verificado via Supabase MCP em 2026-07-09) — ver seção abaixo. Migração deve reconciliar com a realidade, não com o schema do `main`. |
 | Direção | Multi-projeto (código de `trabalho-local` é a fonte de verdade) |
 | Convite | Desejado; mecanismo = **Edge Function** com service_role |
-| Quem convida | Só **admin/dono** → `project_members.role` (`admin`/`member`) |
-| Tela Equipe | Dados fictícios removidos; Equipe = pessoas reais convidadas (via `project_members` + `profiles`) |
-| Dados de seed (conteúdo) | **Zerar tudo** (tasks, bugs, GDD, roadmap, assets, brainstorm) |
-| Colunas do Kanban | Mantidas (estrutura necessária ao board), escopadas ao origem-studio |
-| Bootstrap de acesso | **Todos os `auth.users` existentes** viram `admin` do origem-studio |
+| Papéis | `owner` + `admin` + `member` (`project_members.role`). `owner` e `admin` podem convidar; `member` não. |
+| Quem convida | Só `owner`/`admin` |
+| Tela Equipe | Dados fictícios removidos; Equipe = pessoas reais (via `project_members` + `profiles`) |
+| Dados de seed (conteúdo) | **Zerar tudo** — na prática já está vazio (0 linhas nas tabelas de conteúdo) |
+| Colunas do Kanban | Semear as 5 colunas padrão para o origem-studio (estrutura necessária ao board) |
+| Bootstrap de acesso | **Só `nathy@origemstudio.com.br`** vira `owner` do origem-studio. Linha órfã de `project_members` (jvtt) é removida; jvtt pode ser convidado depois. |
 | `.env` | Trazer para a branch; adicionar ao `.gitignore` e remover do versionamento |
+
+### Estado real do banco (verificado via Supabase MCP — projeto `tool-studio` / `ylovhjbncdmoibeoandi`)
+
+O banco **não** é o schema flat do `main`. Alguém rodou migrações parciais, deixando um híbrido inconsistente:
+
+- **Existem** `profiles` (mas **sem coluna `email`**; tem `id, name, role, created_at`), `project_members` (com **1 linha órfã**: role `owner`, apontando para um `project_id` inexistente), e `roadmap_items` (com **`due_date`, sem `quarter`** — o código usa `quarter`).
+- **Ainda existem** `roadmap_quarters` (0 linhas) e `team_members` (0 linhas).
+- `tasks`, `bugs`, `kanban_columns`, `gdd_sections`, `assets`, `brainstorm_notes` **não têm `project_id`**; `tasks` tem `assignees`/`comments` (não `assignee_names`/`comments_count`) e nenhum `display_id`.
+- **`projects` e `profiles` estão vazias** → hoje o login não carrega projeto nenhum.
+- **2 usuários de auth**: `jvtt@origemstudio.com.br`, `nathy@origemstudio.com.br`. Todas as tabelas de conteúdo com 0 linhas.
+
+Implicações para a migração (§1): adicionar `email` a `profiles`; adicionar `quarter` a `roadmap_items`; dropar `roadmap_quarters` e `team_members`; adicionar `project_id` às tabelas de conteúdo; renomear colunas de `tasks`; criar o projeto `origem-studio`; limpar a linha órfã; bootstrap da nathy como `owner`; backfill de `profiles` para os 2 usuários.
 
 ## Arquitetura
 
@@ -145,9 +159,52 @@ Como o merge de `main` foi abortado, na prática esses arquivos já estão na ve
 - Admin convida email de teste → convidado recebe email → define senha → loga → aparece na tela Equipe.
 - Não-admin não vê o botão "Convidar"; chamada direta à função por não-admin retorna 403.
 
+## 7. Fase 3 — CRUD das páginas hoje só de leitura
+
+Hoje só Kanban (tasks) e Bugs têm CRUD. GDD, Roadmap, Brainstorm e Assets são somente leitura. Esta fase adiciona criar/editar/excluir persistindo no Supabase, escopado por `project_id`, seguindo o padrão já existente (funções em `src/api/*.ts` + mutations em `src/queries/mutations.ts` que invalidam a query da tela + dialogs no padrão de `bug-dialog.tsx`).
+
+### 7.1 Refactor de tipos (`src/lib/data.ts`)
+
+CRUD por item exige identidade estável. Adicionar `id` onde falta:
+- `BrainstormNote`: adicionar `id: string`.
+- `Asset`: adicionar `id: string` e `url: string` (link do arquivo no Storage).
+- Roadmap: introduzir `RoadmapItem = { id: string; title: string }`; `RoadmapQuarter.items` passa de `string[]` para `RoadmapItem[]`.
+
+### 7.2 GDD (`gdd_sections`)
+
+- API: `createGddSection`, `updateGddSection` (title/label/body), `deleteGddSection`.
+- `key` gerado no cliente (`crypto.randomUUID()`); `label` default = `title`.
+- UI: botão "+ Seção"; edição do corpo da seção ativa via textarea + salvar; excluir seção. Edição **inline** (textarea na própria tela), não dialog.
+
+### 7.3 Roadmap (`roadmap_items`)
+
+- API: `createRoadmapItem` (quarter, title, status), `updateRoadmapItem` (title/status/quarter), `deleteRoadmapItem`.
+- `fetchRoadmap` passa a retornar itens com `id` (agrupados por trimestre como hoje, mas cada item é `{id, title}`).
+- UI: adicionar item (informando trimestre + status); editar/excluir por item (dialog simples).
+
+### 7.4 Brainstorm (`brainstorm_notes`)
+
+- API: `createBrainstormNote` (text, color, x, y), `updateBrainstormNote` (text/color/x/y), `deleteBrainstormNote`.
+- `fetchBrainstormNotes` passa a incluir `id`.
+- UI: botão "+ Nota" cria nota; clicar abre edição (texto + cor) e excluir; **arrastar** a nota atualiza `x/y` (persistido ao soltar). Ver pergunta aberta sobre drag.
+
+### 7.5 Assets (`assets` + Supabase Storage)
+
+- Bucket `assets` no Storage (criado na migração via `storage.buckets` + policies de acesso por membro do projeto). Caminho do objeto: `<projectId>/<uuid>-<filename>`.
+- API: `uploadAsset(projectId, file, { type })` → `storage.upload` → insere linha (`name`, `type`, `size` formatado de `file.size`, `by` = nome/email do usuário atual, `project_id`, `url`); `deleteAsset` → remove objeto do Storage + linha.
+- `type` do asset: escolhido pelo usuário num dropdown (Modelo 3D, Textura, Áudio, UI, Ambiente, Animação, Outro) — evita inferência frágil por extensão.
+- UI: botão "+ Upload" abre seletor de arquivo + dropdown de tipo; card ganha ação de excluir.
+- Migração ganha: `alter table assets add column url text` e criação do bucket + policies.
+
+### 7.6 Verificação (Fase 3)
+
+Para cada tela: criar → aparece e persiste após reload; editar → reflete; excluir → some. Assets: upload real sobe arquivo ao bucket e o card mostra; excluir remove do bucket. Tudo escopado por `project_id` e sujeito às policies de membro.
+
 ## Fora de escopo (YAGNI)
 
 - Seletor de múltiplos projetos na UI (o slug é fixo `origem-studio` por ora; o schema já suporta vários).
 - Papéis além de `admin`/`member`.
 - Migrar dados de seed antigos (serão zerados).
 - Portar qualquer código do `main` além do `.env`.
+- Preview real de arquivos de asset (thumbnails) — o card mantém o placeholder "preview" por ora.
+- Reordenação drag-and-drop de itens do roadmap/colunas além do que já existe no Kanban.
