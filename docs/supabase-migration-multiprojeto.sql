@@ -52,7 +52,9 @@ alter table public.gdd_sections     add column if not exists project_id uuid ref
 alter table public.assets           add column if not exists project_id uuid references public.projects(id) on delete cascade;
 alter table public.brainstorm_notes add column if not exists project_id uuid references public.projects(id) on delete cascade;
 
--- ---------- 4. TASKS: renomes + display_id ----------
+-- ---------- 4. TASKS: id default + renomes + display_id ----------
+-- id é text PK sem default; o código insere sem id → dar default UUID
+alter table public.tasks alter column id set default gen_random_uuid()::text;
 do $$
 begin
   if exists (select 1 from information_schema.columns
@@ -77,7 +79,8 @@ drop trigger if exists tasks_display_id_trigger on public.tasks;
 create trigger tasks_display_id_trigger before insert on public.tasks
   for each row execute function public.generate_task_display_id();
 
--- ---------- 5. BUGS: display_id ----------
+-- ---------- 5. BUGS: id default + display_id ----------
+alter table public.bugs alter column id set default gen_random_uuid()::text;
 alter table public.bugs add column if not exists display_id text;
 create sequence if not exists public.bug_display_seq start with 2240;
 create or replace function public.generate_bug_display_id()
