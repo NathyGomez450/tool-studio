@@ -21,7 +21,7 @@ export function Assets() {
   const { data: assets, isLoading, isError } = useAssets(projectId);
   return (
     <>
-      <TopBar title="Assets — Skyline Racer" subtitle={`${assets?.length ?? 0} arquivos`} icon={<Boxes size={20} />} actions={<Button variant="secondary">+ Upload</Button>} />
+      <TopBar title={`Assets — ${activeProject?.name ?? 'Projeto'}`} subtitle={`${assets?.length ?? 0} arquivos`} icon={<Boxes size={20} />} actions={<Button variant="secondary">+ Upload</Button>} />
       <div className="flex-1 overflow-auto p-5 px-6">
         {isLoading ? (
           <ScreenLoading />

@@ -26,6 +26,7 @@ import { Assets } from '@/screens/assets';
 import { Team } from '@/screens/team';
 import { LoginScreen } from '@/screens/login';
 import { useUiStore } from '@/stores/ui-store';
+import { useColumns, useBugs } from '@/queries/hooks';
 
 interface NavEntry {
   key: string;
@@ -46,8 +47,8 @@ const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
   {
     label: 'Execucao',
     items: [
-      { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, badge: 12, Screen: KanbanBoard },
-      { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, badge: 4, Screen: Bugs },
+      { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, Screen: KanbanBoard },
+      { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, Screen: Bugs },
       { key: 'brainstorm', label: 'Brainstorm', icon: <Sparkles size={16} />, Screen: Brainstorm },
     ],
   },
@@ -64,10 +65,20 @@ const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
 const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
 
 export default function App() {
-  const { loading, accessLoading, authorized, accessError, user, signOut } = useAuth();
+  const { loading, accessLoading, authorized, accessError, user, signOut, activeProject } = useAuth();
   const active = useUiStore((s) => s.activeScreen);
   const setActive = useUiStore((s) => s.setActiveScreen);
   const [query, setQuery] = React.useState('');
+
+  const projectId = activeProject?.id ?? '';
+  const { data: kanbanColumns } = useColumns(projectId);
+  const { data: bugsData } = useBugs(projectId);
+  const taskCount = (kanbanColumns ?? []).reduce((n, c) => n + c.tasks.length, 0);
+  const bugCount = (bugsData ?? []).length;
+  const badgeByKey: Record<string, number | undefined> = {
+    kanban: taskCount || undefined,
+    bugs: bugCount || undefined,
+  };
   const current = NAV.find((n) => n.key === active) ?? NAV[0];
   const Screen = current.Screen;
 
@@ -112,7 +123,7 @@ export default function App() {
             <div key={g.label} className="flex flex-col gap-0.5">
               <div className="px-4 pb-1 text-[10px] font-semibold tracking-wider uppercase text-disabled">{g.label}</div>
               {g.items.map((n) => (
-                <NavItem key={n.key} icon={n.icon} label={n.label} active={active === n.key} badge={n.badge} onClick={() => setActive(n.key)} />
+                <NavItem key={n.key} icon={n.icon} label={n.label} active={active === n.key} badge={badgeByKey[n.key] ?? n.badge} onClick={() => setActive(n.key)} />
               ))}
             </div>
           ))}

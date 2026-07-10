@@ -123,7 +123,7 @@ export function KanbanBoard() {
   return (
     <>
       <TopBar
-        title="Kanban — Skyline Racer"
+        title={`Kanban — ${activeProject?.name ?? 'Projeto'}`}
         subtitle={`${totalTasks} tarefas ativas`}
         icon={<KanbanIcon size={20} />}
         iconTone="info"

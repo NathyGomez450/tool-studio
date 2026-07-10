@@ -13,7 +13,7 @@ export function Gdd() {
   if (isLoading) {
     return (
       <>
-        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
+        <TopBar title={`Game Design Document — ${activeProject?.name ?? 'Projeto'}`} subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
         <div className="flex-1 overflow-auto">
           <ScreenLoading />
         </div>
@@ -23,7 +23,7 @@ export function Gdd() {
   if (isError || !gddSections) {
     return (
       <>
-        <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
+        <TopBar title={`Game Design Document — ${activeProject?.name ?? 'Projeto'}`} subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
         <div className="flex-1 overflow-auto">
           <ScreenError />
         </div>
@@ -34,6 +34,7 @@ export function Gdd() {
 }
 
 function GddContent({ sections }: { sections: GddSection[] }) {
+  const { activeProject } = useAuth();
   const [active, setActive] = React.useState(sections[0]?.key ?? '');
   const section = sections.find((s) => s.key === active) ?? sections[0];
 
@@ -41,7 +42,7 @@ function GddContent({ sections }: { sections: GddSection[] }) {
 
   return (
     <>
-      <TopBar title="Game Design Document — Skyline Racer" subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
+      <TopBar title={`Game Design Document — ${activeProject?.name ?? 'Projeto'}`} subtitle="Última edição" icon={<BookOpen size={20} />} iconTone="creative" />
       <div className="flex-1 flex min-h-0">
         <div className="w-[220px] border-r border-border-subtle p-4 px-2 flex flex-col gap-0.5 shrink-0">
           {sections.map((s) => (

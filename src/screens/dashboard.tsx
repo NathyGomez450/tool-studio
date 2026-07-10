@@ -32,7 +32,7 @@ export function Dashboard() {
   const { data, isLoading, isError } = useDashboard(projectId);
   return (
     <>
-      <TopBar title="Painel — Skyline Racer" subtitle="Visão geral do projeto" icon={<LayoutDashboard size={20} />} />
+      <TopBar title={`Painel — ${activeProject?.name ?? 'Projeto'}`} subtitle="Visão geral do projeto" icon={<LayoutDashboard size={20} />} />
       <div className="p-6 overflow-auto flex flex-col gap-5">
         {isLoading ? (
           <ScreenLoading />

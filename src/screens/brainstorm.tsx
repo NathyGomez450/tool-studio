@@ -24,7 +24,7 @@ export function Brainstorm() {
   const { data: brainstormNotes, isLoading, isError } = useBrainstormNotes(projectId);
   return (
     <>
-      <TopBar title="Brainstorm — Skyline Racer" subtitle="Board livre de ideias" icon={<Sparkles size={20} />} iconTone="warning" actions={<Button variant="secondary">+ Nota</Button>} />
+      <TopBar title={`Brainstorm — ${activeProject?.name ?? 'Projeto'}`} subtitle="Board livre de ideias" icon={<Sparkles size={20} />} iconTone="warning" actions={<Button variant="secondary">+ Nota</Button>} />
       <div
         className="flex-1 relative overflow-auto bg-[var(--bg-canvas)]"
         style={{ backgroundImage: 'radial-gradient(var(--border-default) 1px, transparent 1px)', backgroundSize: '22px 22px' }}

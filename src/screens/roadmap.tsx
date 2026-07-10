@@ -19,7 +19,7 @@ export function Roadmap() {
   const { data: roadmap, isLoading, isError } = useRoadmap(projectId);
   return (
     <>
-      <TopBar title="Roadmap — Skyline Racer" subtitle="Próximos trimestres" icon={<ArrowRight size={20} />} iconTone="success" />
+      <TopBar title={`Roadmap — ${activeProject?.name ?? 'Projeto'}`} subtitle="Próximos trimestres" icon={<ArrowRight size={20} />} iconTone="success" />
       <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
           <ScreenLoading />

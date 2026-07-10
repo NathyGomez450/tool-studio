@@ -66,7 +66,7 @@ export function Bugs() {
   return (
     <>
       <TopBar
-        title="Bug Tracker — Skyline Racer"
+        title={`Bug Tracker — ${activeProject?.name ?? 'Projeto'}`}
         subtitle={`${filteredBugs.length} bugs · ${criticosAbertos} críticos`}
         icon={<BugIcon size={20} />}
         iconTone="danger"
