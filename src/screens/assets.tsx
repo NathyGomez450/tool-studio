@@ -63,8 +63,17 @@ export function Assets() {
                 >
                   <Trash2 size={13} /> {confirmId === a.id ? 'Confirmar?' : ''}
                 </button>
-                <a href={a.url || undefined} target="_blank" rel="noreferrer" className="h-20 rounded-sm bg-surface3 flex items-center justify-center text-disabled text-[11px]">
-                  preview
+                <a
+                  href={a.url || undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-20 rounded-sm bg-surface3 flex items-center justify-center overflow-hidden text-disabled text-[11px]"
+                >
+                  {/\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(a.name) && a.url ? (
+                    <img src={a.url} alt={a.name} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <span className="uppercase">{a.name.split('.').pop() || 'arquivo'}</span>
+                  )}
                 </a>
                 <div className="text-xs font-mono text-primary truncate">{a.name}</div>
                 <div className="flex justify-between items-center">
