@@ -31,6 +31,8 @@ end; $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
+-- handle_new_user é só trigger; não deve ser chamável via RPC
+revoke execute on function public.handle_new_user() from anon, authenticated;
 
 -- ---------- 2. PROJECT_MEMBERS: tabela + check de papel ----------
 create table if not exists public.project_members (
@@ -70,7 +72,7 @@ end $$;
 alter table public.tasks add column if not exists display_id text;
 create sequence if not exists public.task_display_seq start with 200;
 create or replace function public.generate_task_display_id()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   if new.display_id is null then new.display_id := 'TASK-' || nextval('public.task_display_seq'); end if;
   return new;
@@ -84,7 +86,7 @@ alter table public.bugs alter column id set default gen_random_uuid()::text;
 alter table public.bugs add column if not exists display_id text;
 create sequence if not exists public.bug_display_seq start with 2240;
 create or replace function public.generate_bug_display_id()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   if new.display_id is null then new.display_id := 'BUG-' || nextval('public.bug_display_seq'); end if;
   return new;

@@ -14,8 +14,8 @@ drop policy if exists "assets read" on storage.objects;
 drop policy if exists "assets insert" on storage.objects;
 drop policy if exists "assets delete" on storage.objects;
 
-create policy "assets read" on storage.objects for select
-  using (bucket_id = 'assets');
+-- Bucket é público: objetos são servidos via URL pública sem SELECT em storage.objects.
+-- Não criar SELECT amplo aqui (evita listagem de todos os arquivos do bucket).
 create policy "assets insert" on storage.objects for insert to authenticated
   with check (bucket_id = 'assets' and public.is_project_member(((storage.foldername(name))[1])::uuid));
 create policy "assets delete" on storage.objects for delete to authenticated
