@@ -28,10 +28,16 @@ export interface Bug {
   when: string;        // derivado de created_at
 }
 
+export interface RoadmapItem {
+  id: string;
+  title: string;
+  status: 'em andamento' | 'planejado' | 'concluído';
+}
+
 export interface RoadmapQuarter {
   quarter: string;
   status: 'em andamento' | 'planejado' | 'concluído';
-  items: string[];
+  items: RoadmapItem[];
 }
 
 export interface GddSection {

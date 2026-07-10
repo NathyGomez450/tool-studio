@@ -3,7 +3,8 @@ import { queryKeys } from './keys';
 import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
 import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
 import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd';
-import { type Task, type Bug } from '@/lib/data';
+import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
+import { type Task, type Bug, type RoadmapItem } from '@/lib/data';
 
 export function useCreateTask(projectId: string) {
   const qc = useQueryClient();
@@ -107,5 +108,34 @@ export function useDeleteGddSection(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string }) => deleteGddSection(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
+  });
+}
+
+export function useCreateRoadmapItem(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { quarter: string; title: string; status: RoadmapItem['status'] }) =>
+      createRoadmapItem(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
+  });
+}
+
+export function useUpdateRoadmapItem(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string; title: string; status: RoadmapItem['status']; quarter: string }) =>
+      updateRoadmapItem(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
+  });
+}
+
+export function useDeleteRoadmapItem(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string }) => deleteRoadmapItem(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
   });
 }
