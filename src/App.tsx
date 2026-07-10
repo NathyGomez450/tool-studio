@@ -25,6 +25,7 @@ import { Brainstorm } from '@/screens/brainstorm';
 import { Assets } from '@/screens/assets';
 import { Team } from '@/screens/team';
 import { LoginScreen } from '@/screens/login';
+import { SetPasswordScreen } from '@/screens/set-password';
 import { useUiStore } from '@/stores/ui-store';
 import { useColumns, useBugs } from '@/queries/hooks';
 
@@ -65,7 +66,7 @@ const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
 const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
 
 export default function App() {
-  const { loading, accessLoading, authorized, accessError, user, signOut, activeProject } = useAuth();
+  const { loading, accessLoading, authorized, accessError, user, signOut, activeProject, mustSetPassword } = useAuth();
   const active = useUiStore((s) => s.activeScreen);
   const setActive = useUiStore((s) => s.setActiveScreen);
   const [query, setQuery] = React.useState('');
@@ -97,6 +98,10 @@ export default function App() {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  if (mustSetPassword) {
+    return <SetPasswordScreen />;
   }
 
   const displayName = user.user_metadata?.name || user.email || 'Equipe';

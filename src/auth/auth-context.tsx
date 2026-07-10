@@ -17,12 +17,18 @@ type AuthContextValue = {
   user: User | null;
   activeProject: ActiveProject | null;
   canInvite: boolean;
+  mustSetPassword: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  completePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const PROJECT_SLUG = 'origem-studio';
 const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+// Convite/recuperação chegam com token no hash da URL (#...type=invite|recovery).
+const INITIAL_HASH = typeof window !== 'undefined' ? window.location.hash : '';
+const IS_INVITE_FLOW = /type=(invite|recovery)/.test(INITIAL_HASH);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
@@ -30,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [activeProject, setActiveProject] = React.useState<ActiveProject | null>(null);
   const [canInvite, setCanInvite] = React.useState(false);
+  const [mustSetPassword, setMustSetPassword] = React.useState(IS_INVITE_FLOW);
   const [accessError, setAccessError] = React.useState('');
 
   async function loadProjectAccess(nextSession: Session | null) {
@@ -96,9 +103,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       activeProject,
       canInvite,
+      mustSetPassword,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+      },
+      async completePassword(password) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setMustSetPassword(false);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
       },
       async signOut() {
         const { error } = await supabase.auth.signOut();
@@ -109,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccessError('');
       },
     }),
-    [accessError, accessLoading, activeProject, canInvite, loading, session],
+    [accessError, accessLoading, activeProject, canInvite, mustSetPassword, loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
