@@ -1,9 +1,62 @@
-import { fake } from './client';
-import { db, nextTaskId, persist } from './db';
+import { supabase } from '@/lib/supabase';
 import { type Column, type Task } from '@/lib/data';
 
-export function fetchColumns(): Promise<Column[]> {
-  return fake(db.columns);
+type DbTask = {
+  id: string;
+  title: string;
+  priority: string;
+  tags: string[];
+  assignees: string[];
+  comments: number;
+  column_id: string;
+  position: number;
+};
+
+type DbColumn = {
+  id: string;
+  key: string;
+  label: string;
+  position: number;
+};
+
+function dbTaskToTask(t: DbTask): Task {
+  return {
+    id: t.id,
+    title: t.title,
+    priority: t.priority as Task['priority'],
+    tags: t.tags ?? [],
+    assignees: t.assignees ?? [],
+    comments: t.comments ?? 0,
+  };
+}
+
+export async function fetchColumns(): Promise<Column[]> {
+  const { data: dbColumns, error: colErr } = await supabase
+    .from('kanban_columns')
+    .select('*')
+    .order('position');
+
+  if (colErr) throw colErr;
+
+  const { data: dbTasks, error: taskErr } = await supabase
+    .from('tasks')
+    .select('*')
+    .order('position');
+
+  if (taskErr) throw taskErr;
+
+  const taskMap = new Map<string, DbTask[]>();
+  for (const t of dbTasks ?? []) {
+    const arr = taskMap.get(t.column_id) ?? [];
+    arr.push(t);
+    taskMap.set(t.column_id, arr);
+  }
+
+  return (dbColumns ?? []).map((col) => ({
+    key: col.key,
+    label: col.label,
+    tasks: (taskMap.get(col.id) ?? []).map(dbTaskToTask),
+  }));
 }
 
 export async function createTask(input: {
@@ -11,31 +64,66 @@ export async function createTask(input: {
   priority: Task['priority'];
   tag?: string;
 }): Promise<Task> {
-  const task: Task = {
-    id: nextTaskId(),
+  const { data: backlogCol, error: colErr } = await supabase
+    .from('kanban_columns')
+    .select('id')
+    .eq('key', 'backlog')
+    .single();
+
+  if (colErr || !backlogCol) throw new Error('Coluna backlog não encontrada');
+
+  const { count } = await supabase
+    .from('tasks')
+    .select('*', { count: 'exact', head: true })
+    .eq('column_id', backlogCol.id);
+
+  const taskData = {
+    id: `TASK-${Date.now()}`,
     title: input.title,
     priority: input.priority,
     tags: input.tag ? [input.tag] : [],
     assignees: ['Marina Souza'],
     comments: 0,
+    column_id: backlogCol.id,
+    position: count ?? 0,
   };
-  const backlog = db.columns.find((c) => c.key === 'backlog');
-  if (backlog) backlog.tasks.push(task);
-  return persist(task);
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert(taskData)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return dbTaskToTask(data);
 }
 
-export async function moveTask(input: { taskId: string; toColumnKey: string; toIndex: number }): Promise<void> {
-  const from = db.columns.find((c) => c.tasks.some((t) => t.id === input.taskId));
-  const to = db.columns.find((c) => c.key === input.toColumnKey);
-  if (!from || !to) {
-    await persist(null);
-    return;
-  }
-  const fromIdx = from.tasks.findIndex((t) => t.id === input.taskId);
-  const [task] = from.tasks.splice(fromIdx, 1);
-  const idx = Math.max(0, Math.min(input.toIndex, to.tasks.length));
-  to.tasks.splice(idx, 0, task);
-  await persist(null);
+export async function moveTask(input: {
+  taskId: string;
+  toColumnKey: string;
+  toIndex: number;
+}): Promise<void> {
+  const { data: toCol, error: colErr } = await supabase
+    .from('kanban_columns')
+    .select('id')
+    .eq('key', input.toColumnKey)
+    .single();
+
+  if (colErr || !toCol) throw new Error(`Coluna ${input.toColumnKey} não encontrada`);
+
+  const { count } = await supabase
+    .from('tasks')
+    .select('*', { count: 'exact', head: true })
+    .eq('column_id', toCol.id);
+
+  const position = Math.max(0, Math.min(input.toIndex, count ?? 0));
+
+  const { error } = await supabase
+    .from('tasks')
+    .update({ column_id: toCol.id, position })
+    .eq('id', input.taskId);
+
+  if (error) throw error;
 }
 
 export async function updateTask(input: {
@@ -44,26 +132,26 @@ export async function updateTask(input: {
   priority: Task['priority'];
   tags: string[];
 }): Promise<Task> {
-  let found: Task | undefined;
-  for (const col of db.columns) {
-    const t = col.tasks.find((x) => x.id === input.taskId);
-    if (t) {
-      t.title = input.title;
-      t.priority = input.priority;
-      t.tags = input.tags;
-      found = t;
-      break;
-    }
-  }
-  if (!found) throw new Error(`Task ${input.taskId} não encontrada`);
-  return persist(found);
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({
+      title: input.title,
+      priority: input.priority,
+      tags: input.tags,
+    })
+    .eq('id', input.taskId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return dbTaskToTask(data);
 }
 
 export async function deleteTask(input: { taskId: string }): Promise<void> {
-  const col = db.columns.find((c) => c.tasks.some((t) => t.id === input.taskId));
-  if (col) {
-    const idx = col.tasks.findIndex((t) => t.id === input.taskId);
-    col.tasks.splice(idx, 1);
-  }
-  await persist(null);
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('id', input.taskId);
+
+  if (error) throw error;
 }

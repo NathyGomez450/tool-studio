@@ -1,6 +1,34 @@
-import { fake } from './client';
-import { brainstormNotes } from '@/lib/data';
+import { supabase } from '@/lib/supabase';
 
-export function fetchBrainstormNotes(): Promise<typeof brainstormNotes> {
-  return fake(brainstormNotes);
+type BrainstormNote = {
+  text: string;
+  color: string;
+  x: number;
+  y: number;
+};
+
+type DbBrainstorm = {
+  id: string;
+  text: string;
+  color: string;
+  x: number;
+  y: number;
+};
+
+function dbNoteToNote(n: DbBrainstorm): BrainstormNote {
+  return {
+    text: n.text,
+    color: n.color,
+    x: n.x,
+    y: n.y,
+  };
+}
+
+export async function fetchBrainstormNotes(): Promise<BrainstormNote[]> {
+  const { data, error } = await supabase
+    .from('brainstorm_notes')
+    .select('*');
+
+  if (error) throw error;
+  return (data ?? []).map(dbNoteToNote);
 }
