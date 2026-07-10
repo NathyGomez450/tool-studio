@@ -16,6 +16,8 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/auth/auth-context';
+import { useColumns } from '@/queries/hooks';
+import { useBugs } from '@/queries/hooks';
 import { Dashboard } from '@/screens/dashboard';
 import { KanbanBoard } from '@/screens/kanban';
 import { Bugs } from '@/screens/bugs';
@@ -35,39 +37,47 @@ interface NavEntry {
   Screen: React.ComponentType;
 }
 
-const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
-  {
-    label: 'Visao geral',
-    items: [
-      { key: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={16} />, Screen: Dashboard },
-      { key: 'roadmap', label: 'Roadmap', icon: <ArrowRight size={16} />, Screen: Roadmap },
-    ],
-  },
-  {
-    label: 'Execucao',
-    items: [
-      { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, badge: 12, Screen: KanbanBoard },
-      { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, badge: 4, Screen: Bugs },
-      { key: 'brainstorm', label: 'Brainstorm', icon: <Sparkles size={16} />, Screen: Brainstorm },
-    ],
-  },
-  {
-    label: 'Documentacao',
-    items: [
-      { key: 'gdd', label: 'GDD', icon: <BookOpen size={16} />, Screen: Gdd },
-      { key: 'assets', label: 'Assets', icon: <Boxes size={16} />, Screen: Assets },
-      { key: 'team', label: 'Equipe', icon: <Users size={16} />, Screen: Team },
-    ],
-  },
-];
-
-const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
-
 export default function App() {
   const { loading, accessLoading, authorized, accessError, user, signOut } = useAuth();
   const active = useUiStore((s) => s.activeScreen);
   const setActive = useUiStore((s) => s.setActiveScreen);
   const [query, setQuery] = React.useState('');
+
+  // Buscar contagens do banco
+  const { data: columns } = useColumns();
+  const { data: bugsData } = useBugs();
+
+  // Calcular badges dinamicamente
+  const totalTasks = columns?.reduce((acc, col) => acc + col.tasks.length, 0) ?? 0;
+  const totalBugs = bugsData?.length ?? 0;
+
+  const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
+    {
+      label: 'Visao geral',
+      items: [
+        { key: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={16} />, Screen: Dashboard },
+        { key: 'roadmap', label: 'Roadmap', icon: <ArrowRight size={16} />, Screen: Roadmap },
+      ],
+    },
+    {
+      label: 'Execucao',
+      items: [
+        { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, badge: totalTasks > 0 ? totalTasks : undefined, Screen: KanbanBoard },
+        { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, badge: totalBugs > 0 ? totalBugs : undefined, Screen: Bugs },
+        { key: 'brainstorm', label: 'Brainstorm', icon: <Sparkles size={16} />, Screen: Brainstorm },
+      ],
+    },
+    {
+      label: 'Documentacao',
+      items: [
+        { key: 'gdd', label: 'GDD', icon: <BookOpen size={16} />, Screen: Gdd },
+        { key: 'assets', label: 'Assets', icon: <Boxes size={16} />, Screen: Assets },
+        { key: 'team', label: 'Equipe', icon: <Users size={16} />, Screen: Team },
+      ],
+    },
+  ];
+
+  const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
   const current = NAV.find((n) => n.key === active) ?? NAV[0];
   const Screen = current.Screen;
 
@@ -145,4 +155,3 @@ export default function App() {
     </div>
   );
 }
-

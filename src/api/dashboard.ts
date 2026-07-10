@@ -13,27 +13,17 @@ export async function fetchDashboard(): Promise<DashboardData> {
   const totalTasks = tasksRes.count ?? 0;
   const bugs = bugsRes.data ?? [];
   const criticalBugs = bugs.filter((b) => b.severity === 'critical').length;
-  const resolvedBugs = bugs.filter((b) => b.status === 'corrigido').length;
 
   const stats = [
     { label: 'Tarefas abertas', value: String(totalTasks) },
     { label: 'Bugs críticos', value: String(criticalBugs) },
-    { label: 'Sprint atual', value: '64%' },
-    { label: 'Marcos no prazo', value: '5/6' },
+    { label: 'Sprint atual', value: totalTasks > 0 ? `${Math.round((bugs.filter((b) => b.status === 'corrigido').length / Math.max(bugs.length, 1)) * 100)}%` : '0%' },
+    { label: 'Bugs corrigidos', value: `${bugs.filter((b) => b.status === 'corrigido').length}/${bugs.length}` },
   ];
 
-  const sprint = [
-    { label: 'Mecânicas de corrida', value: 80 },
-    { label: 'UI de progressão', value: 45 },
-    { label: 'Sistema de loja', value: 20 },
-  ];
-
-  const activity = [
-    { who: 'Carlos Dias', what: 'moveu BUG-2231 para Em Revisão', when: 'há 12 min' },
-    { who: 'Léo Ramos', what: 'comentou em TASK-142', when: 'há 40 min' },
-    { who: 'Marina Souza', what: 'concluiu TASK-138', when: 'há 1h' },
-    { who: 'Ana Prado', what: 'adicionou nova página ao GDD: Progressão', when: 'há 3h' },
-  ];
+  // Sprint e activity ficam vazios — só dados reais do banco
+  const sprint: { label: string; value: number }[] = [];
+  const activity: { who: string; what: string; when: string }[] = [];
 
   return { stats, sprint, activity };
 }
