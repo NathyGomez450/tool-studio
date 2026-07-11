@@ -1,16 +1,27 @@
 import * as React from 'react';
-import { BookOpen, Pencil, Trash2, Plus } from 'lucide-react';
+import { BookOpen, Pencil, Trash2, Plus, Paperclip, FileText, Upload, Loader2 } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
-import { type GddSection } from '@/lib/data';
+import { type GddSection, type GddAttachment } from '@/lib/data';
 import { useGddSections } from '@/queries/hooks';
-import { useCreateGddSection, useUpdateGddSection, useDeleteGddSection } from '@/queries/mutations';
+import {
+  useCreateGddSection,
+  useUpdateGddSection,
+  useDeleteGddSection,
+  useUploadGddDoc,
+  useRemoveGddDoc,
+} from '@/queries/mutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
 import DOMPurify from 'dompurify';
 import { useAuth } from '@/auth/auth-context';
 import '@/components/rich-text.css';
+
+const DocViewer = React.lazy(() =>
+  import('@/components/doc-viewer').then((m) => ({ default: m.DocViewer })),
+);
 
 export function Gdd() {
   const { activeProject } = useAuth();
@@ -47,8 +58,30 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
   const createSection = useCreateGddSection(projectId);
   const updateSection = useUpdateGddSection(projectId);
   const deleteSection = useDeleteGddSection(projectId);
+  const uploadDoc = useUploadGddDoc(projectId);
+  const removeDoc = useRemoveGddDoc(projectId);
+
+  const docInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [viewerDoc, setViewerDoc] = React.useState<GddAttachment | null>(null);
+  const [confirmDocPath, setConfirmDocPath] = React.useState<string | null>(null);
 
   const section = sections.find((s) => s.key === active) ?? sections[0];
+
+  function onPickDoc(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !section) return;
+    uploadDoc.mutate({ sectionId: section.id, file });
+  }
+
+  function onRemoveDoc(path: string) {
+    if (!section) return;
+    if (confirmDocPath !== path) {
+      setConfirmDocPath(path);
+      return;
+    }
+    removeDoc.mutate({ sectionId: section.id, path }, { onSettled: () => setConfirmDocPath(null) });
+  }
 
   React.useEffect(() => {
     setEditing(false);
@@ -154,10 +187,56 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
               ) : (
                 <p className="text-sm text-tertiary italic">Sem conteúdo. Clique em Editar para adicionar.</p>
               )}
+
+              <div className="mt-8 border-t border-border-subtle pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+                    <Paperclip size={14} /> Documentos anexados
+                  </span>
+                  <Button variant="secondary" size="sm" onClick={() => docInputRef.current?.click()} disabled={uploadDoc.isPending}>
+                    {uploadDoc.isPending ? <Loader2 size={13} className="mr-1 animate-spin" /> : <Upload size={13} className="mr-1" />}
+                    Anexar (PDF/DOCX)
+                  </Button>
+                  <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={onPickDoc} />
+                </div>
+                {section.attachments.length === 0 ? (
+                  <p className="text-[12px] text-tertiary">Nenhum documento. Anexe um PDF ou DOCX para visualizar aqui.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {section.attachments.map((att) => (
+                      <div key={att.path} className="group flex items-center gap-2.5 rounded-md border border-border-subtle bg-surface px-3 py-2">
+                        <FileText size={15} className="text-tertiary shrink-0" />
+                        <button type="button" onClick={() => setViewerDoc(att)} className="flex-1 text-left text-[13px] text-secondary hover:text-primary truncate">
+                          {att.name}
+                        </button>
+                        <span className="text-[11px] text-disabled uppercase shrink-0">{att.kind}</span>
+                        <span className="text-[11px] text-disabled shrink-0">{att.size}</span>
+                        <button
+                          type="button"
+                          onClick={() => onRemoveDoc(att.path)}
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] flex items-center gap-1 ${confirmDocPath === att.path ? 'text-[var(--red-400)]' : 'text-tertiary opacity-0 group-hover:opacity-100 hover:text-[var(--red-400)]'}`}
+                        >
+                          <Trash2 size={13} /> {confirmDocPath === att.path ? 'Confirmar?' : ''}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
       </div>
+
+      <Dialog open={!!viewerDoc} onOpenChange={(o) => !o && setViewerDoc(null)}>
+        {viewerDoc && (
+          <DialogContent title={viewerDoc.name} className="w-[860px]">
+            <React.Suspense fallback={<div className="h-[60vh] flex items-center justify-center text-[13px] text-tertiary">Abrindo visualizador…</div>}>
+              <DocViewer attachment={viewerDoc} />
+            </React.Suspense>
+          </DialogContent>
+        )}
+      </Dialog>
     </>
   );
 }

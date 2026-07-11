@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
 import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
-import { createGddSection, updateGddSection, deleteGddSection } from '@/api/gdd';
+import { createGddSection, updateGddSection, deleteGddSection, uploadGddDoc, removeGddDoc } from '@/api/gdd';
 import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
 import { createBrainstormNote, updateBrainstormNote, deleteBrainstormNote } from '@/api/brainstorm';
 import { uploadAsset, deleteAsset } from '@/api/assets';
@@ -110,6 +110,24 @@ export function useDeleteGddSection(projectId: string) {
   const keys = queryKeys(projectId);
   return useMutation({
     mutationFn: (input: { id: string }) => deleteGddSection(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
+  });
+}
+
+export function useUploadGddDoc(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { sectionId: string; file: File }) => uploadGddDoc(projectId, input.sectionId, input.file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
+  });
+}
+
+export function useRemoveGddDoc(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { sectionId: string; path: string }) => removeGddDoc(projectId, input.sectionId, input.path),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.gdd }),
   });
 }

@@ -40,12 +40,20 @@ export interface RoadmapQuarter {
   items: RoadmapItem[];
 }
 
+export interface GddAttachment {
+  path: string; // caminho no bucket privado 'docs'
+  name: string;
+  kind: 'pdf' | 'docx' | 'other';
+  size: string;
+}
+
 export interface GddSection {
   id: string;
   key: string;
   label: string;
   title: string;
   body: string;
+  attachments: GddAttachment[];
 }
 
 export interface Asset {
