@@ -1,0 +1,75 @@
+/* Estilo do conteúdo do GDD (editor TipTap + render de leitura) */
+.rich-content {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.rich-content:focus {
+  outline: none;
+}
+.rich-content h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1.2em 0 0.5em;
+}
+.rich-content h2 {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 1.1em 0 0.4em;
+}
+.rich-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 1em 0 0.3em;
+}
+.rich-content p {
+  margin: 0.5em 0;
+}
+.rich-content ul,
+.rich-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+.rich-content ul {
+  list-style: disc;
+}
+.rich-content ol {
+  list-style: decimal;
+}
+.rich-content li {
+  margin: 0.2em 0;
+}
+.rich-content a {
+  color: var(--accent-400);
+  text-decoration: underline;
+}
+.rich-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.75em 0;
+  border: 1px solid var(--border-subtle);
+}
+.rich-content blockquote {
+  border-left: 3px solid var(--border-default);
+  padding-left: 1em;
+  margin: 0.6em 0;
+  color: var(--text-tertiary);
+}
+.rich-content code {
+  font-family: monospace;
+  background: var(--bg-hover);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.rich-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-disabled);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

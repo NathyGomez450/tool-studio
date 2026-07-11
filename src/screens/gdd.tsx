@@ -6,8 +6,11 @@ import { useGddSections } from '@/queries/hooks';
 import { useCreateGddSection, useUpdateGddSection, useDeleteGddSection } from '@/queries/mutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import DOMPurify from 'dompurify';
 import { useAuth } from '@/auth/auth-context';
+import '@/components/rich-text.css';
 
 export function Gdd() {
   const { activeProject } = useAuth();
@@ -124,12 +127,7 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-tertiary">Conteúdo</label>
-                <textarea
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  rows={16}
-                  className="w-full rounded-md border border-subtle bg-canvas p-3 text-sm text-primary leading-relaxed resize-y focus:outline-none focus:ring-1 focus:ring-[var(--accent-500)]"
-                />
+                <RichTextEditor value={editBody} onChange={setEditBody} projectId={projectId} />
               </div>
               <div className="flex gap-2">
                 <Button onClick={saveEdit} disabled={!editTitle.trim() || updateSection.isPending}>
@@ -151,9 +149,11 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
                   </Button>
                 </div>
               </div>
-              <p className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
-                {section.body || <span className="text-tertiary italic">Sem conteúdo. Clique em Editar para adicionar.</span>}
-              </p>
+              {section.body ? (
+                <div className="rich-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.body) }} />
+              ) : (
+                <p className="text-sm text-tertiary italic">Sem conteúdo. Clique em Editar para adicionar.</p>
+              )}
             </>
           )}
         </div>

@@ -56,3 +56,12 @@ export async function deleteGddSection(_projectId: string, input: { id: string }
   const { error } = await supabase.from('gdd_sections').delete().eq('id', input.id);
   if (error) throw error;
 }
+
+/** Sobe uma imagem usada no corpo do GDD e devolve a URL pública (bucket assets, pasta gdd/). */
+export async function uploadGddImage(projectId: string, file: File): Promise<string> {
+  const path = `${projectId}/gdd/${crypto.randomUUID()}-${file.name}`;
+  const up = await supabase.storage.from('assets').upload(path, file);
+  if (up.error) throw up.error;
+  const { data } = supabase.storage.from('assets').getPublicUrl(path);
+  return data.publicUrl;
+}
