@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Sparkles, Plus, Download } from 'lucide-react';
+import { Sparkles, Plus, Download, X } from 'lucide-react';
 import {
   ReactFlow,
   Background,
@@ -53,8 +53,8 @@ const toneBorder: Record<string, string> = {
 };
 
 type NoteData = { text: string; color: string };
-type ActionsCtx = { addChild: (id: string) => void; setColor: (id: string, color: string) => void };
-const Actions = React.createContext<ActionsCtx>({ addChild: () => {}, setColor: () => {} });
+type ActionsCtx = { addChild: (id: string) => void; setColor: (id: string, color: string) => void; remove: (id: string) => void };
+const Actions = React.createContext<ActionsCtx>({ addChild: () => {}, setColor: () => {}, remove: () => {} });
 
 function NoteNode({ id, data }: NodeProps) {
   const d = data as NoteData;
@@ -75,6 +75,15 @@ function NoteNode({ id, data }: NodeProps) {
         title="Adicionar ideia conectada"
       >
         <Plus size={13} />
+      </button>
+
+      <button
+        type="button"
+        className="nodrag absolute -top-2.5 -left-2.5 w-6 h-6 rounded-full bg-[var(--danger-soft)] text-[var(--red-400)] border border-[var(--danger-soft-border)] flex items-center justify-center opacity-0 group-hover:opacity-100 shadow transition-opacity"
+        onClick={(e) => { e.stopPropagation(); actions.remove(id); }}
+        title="Excluir nota"
+      >
+        <X size={13} />
       </button>
 
       <div className="nodrag absolute -bottom-2.5 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -185,8 +194,9 @@ export function Brainstorm() {
   );
 
   const setColor = React.useCallback((id: string, color: string) => updateNote.mutate({ id, color }), [updateNote]);
+  const remove = React.useCallback((id: string) => deleteNote.mutate({ id }), [deleteNote]);
 
-  const actionsValue = React.useMemo<ActionsCtx>(() => ({ addChild, setColor }), [addChild, setColor]);
+  const actionsValue = React.useMemo<ActionsCtx>(() => ({ addChild, setColor, remove }), [addChild, setColor, remove]);
 
   function addNote() {
     createNote.mutate({ text: 'Nova ideia', color: 'accent', x: 120, y: 120 });

@@ -94,6 +94,13 @@ export interface BrainstormEdge {
   label?: string;
 }
 
+export interface NoteComment {
+  id: string;
+  author: string;
+  text: string;
+  when: string;
+}
+
 export interface DashboardStat {
   label: string;
   value: string;

@@ -9,6 +9,7 @@ export function queryKeys(projectId: string) {
     team: ['team', projectId] as const,
     brainstorm: ['brainstorm', projectId] as const,
     brainstormEdges: ['brainstorm-edges', projectId] as const,
+    noteComments: (noteId: string) => ['note-comments', projectId, noteId] as const,
     dashboard: ['dashboard', projectId] as const,
   };
 }

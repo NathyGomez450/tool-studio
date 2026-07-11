@@ -11,6 +11,7 @@ import {
   createBrainstormEdge,
   deleteBrainstormEdge,
   updateBrainstormEdge,
+  addNoteComment,
 } from '@/api/brainstorm';
 import { uploadAsset, deleteAsset } from '@/api/assets';
 import { inviteUser } from '@/api/invites';
@@ -245,6 +246,15 @@ export function useUpdateBrainstormEdge(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; label: string }) => updateBrainstormEdge(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstormEdges }),
+  });
+}
+
+export function useAddNoteComment(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { noteId: string; text: string }) => addNoteComment(projectId, input),
+    onSuccess: (_data, input) => qc.invalidateQueries({ queryKey: keys.noteComments(input.noteId) }),
   });
 }
 

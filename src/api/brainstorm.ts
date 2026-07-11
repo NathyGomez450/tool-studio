@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import { type BrainstormNote, type BrainstormEdge } from '@/lib/data';
+import { type BrainstormNote, type BrainstormEdge, type NoteComment } from '@/lib/data';
+import { formatTimeAgo } from '@/lib/utils';
 
 function rowToNote(n: Record<string, unknown>): BrainstormNote {
   return {
@@ -70,6 +71,36 @@ export async function fetchBrainstormEdges(projectId: string): Promise<Brainstor
 
 export async function updateBrainstormEdge(_projectId: string, input: { id: string; label: string }): Promise<void> {
   const { error } = await supabase.from('brainstorm_edges').update({ label: input.label }).eq('id', input.id);
+  if (error) throw error;
+}
+
+// ---- Comentários por nota ----
+
+export async function fetchNoteComments(noteId: string): Promise<NoteComment[]> {
+  const { data, error } = await supabase
+    .from('brainstorm_comments')
+    .select('*')
+    .eq('note_id', noteId)
+    .order('created_at');
+  if (error) throw error;
+  return (data ?? []).map((c) => ({
+    id: c.id as string,
+    author: (c.author_name as string) ?? '—',
+    text: c.text as string,
+    when: formatTimeAgo(c.created_at as string),
+  }));
+}
+
+export async function addNoteComment(projectId: string, input: { noteId: string; text: string }): Promise<void> {
+  const { data: u } = await supabase.auth.getUser();
+  const author = (u.user?.user_metadata?.name as string) || u.user?.email || '—';
+  const { error } = await supabase.from('brainstorm_comments').insert({
+    project_id: projectId,
+    note_id: input.noteId,
+    author_id: u.user?.id,
+    author_name: author,
+    text: input.text,
+  });
   if (error) throw error;
 }
 
