@@ -53,6 +53,26 @@
   margin: 0.75em 0;
   border: 1px solid var(--border-subtle);
 }
+.rich-content img[data-align='center'] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+.rich-content img[data-align='left'] {
+  display: block;
+  margin-right: auto;
+  margin-left: 0;
+}
+.rich-content img[data-align='right'] {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+}
+/* imagem selecionada no editor */
+.rich-content img.ProseMirror-selectednode {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
 .rich-content blockquote {
   border-left: 3px solid var(--border-default);
   padding-left: 1em;
