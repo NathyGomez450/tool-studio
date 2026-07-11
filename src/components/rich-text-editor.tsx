@@ -5,6 +5,9 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Heading2, Heading3, List, ListOrdered, Link2, ImagePlus, Loader2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { uploadGddImage } from '@/api/gdd';
 import './rich-text.css';
 
@@ -38,6 +41,10 @@ export function RichTextEditor({
 }) {
   const fileRef = React.useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [imgErr, setImgErr] = React.useState('');
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const [linkUrl, setLinkUrl] = React.useState('');
+  const selRef = React.useRef<{ from: number; to: number }>({ from: 0, to: 0 });
 
   const editor = useEditor({
     extensions: [
@@ -53,34 +60,38 @@ export function RichTextEditor({
 
   if (!editor) return null;
 
-  function setLink() {
+  function openLinkDialog() {
     const { from, to } = editor!.state.selection;
-    const hasSelection = from !== to;
-    const prev = editor!.getAttributes('link').href as string | undefined;
-    const url = window.prompt('URL do link:', prev ?? 'https://');
-    if (url === null) return;
-    if (url === '') {
-      editor!.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    if (hasSelection) {
-      editor!.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    selRef.current = { from, to };
+    setLinkUrl((editor!.getAttributes('link').href as string) || '');
+    setLinkOpen(true);
+  }
+
+  function applyLink() {
+    const url = linkUrl.trim();
+    const { from, to } = selRef.current;
+    const chain = editor!.chain().focus().setTextSelection({ from, to });
+    if (!url) {
+      chain.extendMarkRange('link').unsetLink().run();
+    } else if (from !== to) {
+      chain.extendMarkRange('link').setLink({ href: url }).run();
     } else {
-      // Sem texto selecionado: insere a própria URL como link clicável
-      editor!.chain().focus().insertContent(`<a href="${url}">${url}</a> `).run();
+      chain.insertContent(`<a href="${url}">${url}</a> `).run();
     }
+    setLinkOpen(false);
   }
 
   async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    setImgErr('');
     setUploading(true);
     try {
       const url = await uploadGddImage(projectId, file);
       editor!.chain().focus().setImage({ src: url, alt: file.name }).run();
     } catch {
-      window.alert('Falha ao enviar a imagem.');
+      setImgErr('Falha ao enviar a imagem.');
     } finally {
       setUploading(false);
     }
@@ -103,7 +114,7 @@ export function RichTextEditor({
         <button type="button" className={btn(editor.isActive('bulletList'))} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista"><List size={15} /></button>
         <button type="button" className={btn(editor.isActive('orderedList'))} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Lista numerada"><ListOrdered size={15} /></button>
         <span className="w-px h-4 bg-[var(--border-subtle)] mx-1" />
-        <button type="button" className={btn(editor.isActive('link'))} onClick={setLink} title="Link"><Link2 size={15} /></button>
+        <button type="button" className={btn(editor.isActive('link'))} onClick={openLinkDialog} title="Link"><Link2 size={15} /></button>
         <button type="button" className={btn(false)} onClick={() => fileRef.current?.click()} title="Inserir imagem" disabled={uploading}>
           {uploading ? <Loader2 size={15} className="animate-spin" /> : <ImagePlus size={15} />}
         </button>
@@ -129,9 +140,36 @@ export function RichTextEditor({
           </>
         )}
       </div>
+      {imgErr && <div className="px-3 py-1 text-[12px] text-[var(--red-400)]">{imgErr}</div>}
+
       <div className="max-h-[52vh] overflow-auto">
         <EditorContent editor={editor} />
       </div>
+
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent
+          title="Inserir link"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setLinkOpen(false)}>Cancelar</Button>
+              <Button onClick={applyLink}>Aplicar</Button>
+            </>
+          }
+        >
+          <Input
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder="https://exemplo.com"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyLink();
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
