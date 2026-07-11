@@ -28,6 +28,7 @@ import { LoginScreen } from '@/screens/login';
 import { SetPasswordScreen } from '@/screens/set-password';
 import { useUiStore } from '@/stores/ui-store';
 import { useColumns, useBugs } from '@/queries/hooks';
+import { LogoMark } from '@/components/logo-mark';
 
 interface NavEntry {
   key: string;
@@ -110,9 +111,7 @@ export default function App() {
     <div className="flex h-screen bg-canvas font-sans">
       <aside className="w-[240px] border-r border-border-subtle flex flex-col py-4 shrink-0">
         <div className="flex items-center gap-2 px-4 mb-4">
-          <div className="w-[26px] h-[26px] rounded-lg bg-[var(--accent-500)] flex items-center justify-center font-bold text-[13px] text-[var(--text-on-accent)]">
-            O
-          </div>
+          <LogoMark size={28} />
           <div className="font-bold text-sm tracking-tight text-primary">
             Origem <span className="text-tertiary font-medium">Studio</span>
           </div>
