@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { type BrainstormNote } from '@/lib/data';
+import { type BrainstormNote, type BrainstormEdge } from '@/lib/data';
 
 function rowToNote(n: Record<string, unknown>): BrainstormNote {
   return {
@@ -46,5 +46,31 @@ export async function updateBrainstormNote(
 
 export async function deleteBrainstormNote(_projectId: string, input: { id: string }): Promise<void> {
   const { error } = await supabase.from('brainstorm_notes').delete().eq('id', input.id);
+  if (error) throw error;
+}
+
+// ---- Conexões (mapa mental) ----
+
+export async function fetchBrainstormEdges(projectId: string): Promise<BrainstormEdge[]> {
+  const { data, error } = await supabase
+    .from('brainstorm_edges')
+    .select('id, source, target')
+    .eq('project_id', projectId);
+  if (error) throw error;
+  return (data ?? []).map((e) => ({ id: e.id as string, source: e.source as string, target: e.target as string }));
+}
+
+export async function createBrainstormEdge(
+  projectId: string,
+  input: { source: string; target: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from('brainstorm_edges')
+    .insert({ project_id: projectId, source: input.source, target: input.target });
+  if (error) throw error;
+}
+
+export async function deleteBrainstormEdge(_projectId: string, input: { id: string }): Promise<void> {
+  const { error } = await supabase.from('brainstorm_edges').delete().eq('id', input.id);
   if (error) throw error;
 }

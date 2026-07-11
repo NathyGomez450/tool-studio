@@ -7,6 +7,7 @@ export function queryKeys(projectId: string) {
     assets: ['assets', projectId] as const,
     team: ['team', projectId] as const,
     brainstorm: ['brainstorm', projectId] as const,
+    brainstormEdges: ['brainstorm-edges', projectId] as const,
     dashboard: ['dashboard', projectId] as const,
   };
 }

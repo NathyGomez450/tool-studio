@@ -6,7 +6,7 @@ import { fetchRoadmap } from '@/api/roadmap';
 import { fetchGddSections } from '@/api/gdd';
 import { fetchAssets } from '@/api/assets';
 import { fetchTeam } from '@/api/team';
-import { fetchBrainstormNotes } from '@/api/brainstorm';
+import { fetchBrainstormNotes, fetchBrainstormEdges } from '@/api/brainstorm';
 import { fetchDashboard } from '@/api/dashboard';
 
 export function useColumns(projectId: string) {
@@ -42,6 +42,11 @@ export function useTeam(projectId: string) {
 export function useBrainstormNotes(projectId: string) {
   const keys = queryKeys(projectId);
   return useQuery({ queryKey: keys.brainstorm, queryFn: () => fetchBrainstormNotes(projectId), enabled: !!projectId });
+}
+
+export function useBrainstormEdges(projectId: string) {
+  const keys = queryKeys(projectId);
+  return useQuery({ queryKey: keys.brainstormEdges, queryFn: () => fetchBrainstormEdges(projectId), enabled: !!projectId });
 }
 
 export function useDashboard(projectId: string) {

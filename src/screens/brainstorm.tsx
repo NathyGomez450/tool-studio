@@ -1,11 +1,34 @@
 import * as React from 'react';
 import { Sparkles, Plus } from 'lucide-react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Handle,
+  Position,
+  ConnectionMode,
+  type Node,
+  type Edge,
+  type Connection,
+  type NodeProps,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
-import { useBrainstormNotes } from '@/queries/hooks';
-import { useCreateBrainstormNote, useUpdateBrainstormNote } from '@/queries/mutations';
+import { useBrainstormNotes, useBrainstormEdges } from '@/queries/hooks';
+import {
+  useCreateBrainstormNote,
+  useUpdateBrainstormNote,
+  useDeleteBrainstormNote,
+  useCreateBrainstormEdge,
+  useDeleteBrainstormEdge,
+} from '@/queries/mutations';
 import { BrainstormDialog } from '@/components/dialogs/brainstorm-dialog';
-import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import { ScreenLoading, ScreenError } from '@/components/screen-state';
 import { type BrainstormNote } from '@/lib/data';
 import { useAuth } from '@/auth/auth-context';
 
@@ -16,93 +39,141 @@ const toneBg: Record<string, string> = {
   warning: 'var(--warning-soft)',
 };
 const toneBorder: Record<string, string> = {
-  creative: 'oklch(0.58 0.19 300 / 0.35)',
+  creative: 'oklch(0.58 0.19 300 / 0.5)',
   accent: 'var(--accent-soft-border)',
-  info: 'oklch(0.62 0.16 250 / 0.35)',
-  warning: 'oklch(0.75 0.16 75 / 0.35)',
+  info: 'oklch(0.62 0.16 250 / 0.5)',
+  warning: 'oklch(0.75 0.16 75 / 0.5)',
 };
+
+type NoteData = { text: string; color: string };
+
+function NoteNode({ data }: NodeProps) {
+  const d = data as NoteData;
+  return (
+    <div
+      className="w-[200px] min-h-[76px] rounded-md p-3 text-[13px] text-primary leading-relaxed border shadow-md whitespace-pre-wrap break-words"
+      style={{ background: toneBg[d.color] ?? toneBg.accent, borderColor: toneBorder[d.color] ?? toneBorder.accent }}
+    >
+      <Handle type="source" position={Position.Left} className="!w-2 !h-2 !bg-[var(--accent-400)]" />
+      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !bg-[var(--accent-400)]" />
+      {d.text}
+    </div>
+  );
+}
+
+const nodeTypes = { note: NoteNode };
 
 export function Brainstorm() {
   const { activeProject } = useAuth();
   const projectId = activeProject?.id ?? '';
-  const { data: notes, isLoading, isError } = useBrainstormNotes(projectId);
+  const notesQ = useBrainstormNotes(projectId);
+  const edgesQ = useBrainstormEdges(projectId);
+
   const createNote = useCreateBrainstormNote(projectId);
   const updateNote = useUpdateBrainstormNote(projectId);
+  const deleteNote = useDeleteBrainstormNote(projectId);
+  const createEdge = useCreateBrainstormEdge(projectId);
+  const deleteEdge = useDeleteBrainstormEdge(projectId);
 
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [editing, setEditing] = React.useState<BrainstormNote | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [livePos, setLivePos] = React.useState<Record<string, { x: number; y: number }>>({});
-  const dragRef = React.useRef<{ id: string; startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null);
 
-  function onPointerDown(e: React.PointerEvent, note: BrainstormNote) {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { id: note.id, startX: e.clientX, startY: e.clientY, origX: note.x, origY: note.y, moved: false };
-  }
-  function onPointerMove(e: React.PointerEvent) {
-    const d = dragRef.current;
-    if (!d) return;
-    const dx = e.clientX - d.startX;
-    const dy = e.clientY - d.startY;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) d.moved = true;
-    setLivePos((p) => ({ ...p, [d.id]: { x: Math.max(0, d.origX + dx), y: Math.max(0, d.origY + dy) } }));
-  }
-  function onPointerUp(_e: React.PointerEvent, note: BrainstormNote) {
-    const d = dragRef.current;
-    dragRef.current = null;
-    if (!d) return;
-    if (d.moved) {
-      const pos = livePos[d.id];
-      if (pos) updateNote.mutate({ id: note.id, x: Math.round(pos.x), y: Math.round(pos.y) });
-    } else {
-      setEditing(note);
-      setDialogOpen(true);
-    }
-  }
+  React.useEffect(() => {
+    if (!notesQ.data) return;
+    setNodes(
+      notesQ.data.map((n) => ({
+        id: n.id,
+        type: 'note',
+        position: { x: n.x, y: n.y },
+        data: { text: n.text, color: n.color },
+      })),
+    );
+  }, [notesQ.data, setNodes]);
+
+  React.useEffect(() => {
+    if (!edgesQ.data) return;
+    setEdges(edgesQ.data.map((e) => ({ id: e.id, source: e.source, target: e.target, animated: true })));
+  }, [edgesQ.data, setEdges]);
+
+  const onConnect = React.useCallback(
+    (c: Connection) => {
+      if (c.source && c.target && c.source !== c.target) {
+        setEdges((eds) => addEdge({ ...c, animated: true }, eds));
+        createEdge.mutate({ source: c.source, target: c.target });
+      }
+    },
+    [createEdge, setEdges],
+  );
+
+  const onNodeDragStop = React.useCallback(
+    (_e: MouseEvent | TouchEvent, node: Node) => {
+      updateNote.mutate({ id: node.id, x: Math.round(node.position.x), y: Math.round(node.position.y) });
+    },
+    [updateNote],
+  );
+
+  const onNodesDelete = React.useCallback(
+    (deleted: Node[]) => deleted.forEach((n) => deleteNote.mutate({ id: n.id })),
+    [deleteNote],
+  );
+
+  const onEdgesDelete = React.useCallback(
+    (deleted: Edge[]) => deleted.forEach((e) => deleteEdge.mutate({ id: e.id })),
+    [deleteEdge],
+  );
+
+  const onNodeDoubleClick = React.useCallback(
+    (_e: React.MouseEvent, node: Node) => {
+      const note = notesQ.data?.find((n) => n.id === node.id);
+      if (note) {
+        setEditing(note);
+        setDialogOpen(true);
+      }
+    },
+    [notesQ.data],
+  );
 
   function addNote() {
-    createNote.mutate({ text: 'Nova ideia', color: 'accent', x: 60, y: 60 });
+    createNote.mutate({ text: 'Nova ideia', color: 'accent', x: 120, y: 120 });
   }
 
   return (
     <>
       <TopBar
         title={`Brainstorm — ${activeProject?.name ?? 'Projeto'}`}
-        subtitle="Board livre de ideias"
+        subtitle="Mapa mental · arraste dos pontos para conectar ideias"
         icon={<Sparkles size={20} />}
         iconTone="warning"
         actions={<Button variant="secondary" onClick={addNote} disabled={createNote.isPending}><Plus size={14} className="mr-1" /> Nota</Button>}
       />
-      <div
-        className="flex-1 relative overflow-auto bg-[var(--bg-canvas)]"
-        style={{ backgroundImage: 'radial-gradient(var(--border-default) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
-      >
-        {isLoading ? (
+      <div className="flex-1 min-h-0">
+        {notesQ.isLoading ? (
           <ScreenLoading />
-        ) : isError || !notes ? (
+        ) : notesQ.isError ? (
           <ScreenError />
-        ) : notes.length === 0 ? (
-          <ScreenEmpty message="Nenhuma nota. Crie uma com “+ Nota”." />
         ) : (
-          notes.map((n) => {
-            const pos = livePos[n.id] ?? { x: n.x, y: n.y };
-            return (
-              <div
-                key={n.id}
-                onPointerDown={(e) => onPointerDown(e, n)}
-                onPointerMove={onPointerMove}
-                onPointerUp={(e) => onPointerUp(e, n)}
-                className="absolute w-[200px] min-h-[90px] rounded-md p-3.5 text-[13px] text-primary leading-relaxed shadow-md border cursor-grab active:cursor-grabbing select-none touch-none"
-                style={{
-                  left: pos.x,
-                  top: pos.y,
-                  background: toneBg[n.color] ?? toneBg.accent,
-                  borderColor: toneBorder[n.color] ?? toneBorder.accent,
-                }}
-              >
-                {n.text}
-              </div>
-            );
-          })
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeDragStop={onNodeDragStop}
+            onNodesDelete={onNodesDelete}
+            onEdgesDelete={onEdgesDelete}
+            onNodeDoubleClick={onNodeDoubleClick}
+            nodeTypes={nodeTypes}
+            connectionMode={ConnectionMode.Loose}
+            colorMode="dark"
+            fitView
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background />
+            <Controls />
+            <MiniMap pannable zoomable />
+          </ReactFlow>
         )}
       </div>
       <BrainstormDialog open={dialogOpen} onOpenChange={setDialogOpen} projectId={projectId} note={editing} />

@@ -80,6 +80,12 @@ export interface BrainstormNote {
   y: number;
 }
 
+export interface BrainstormEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
 export interface DashboardStat {
   label: string;
   value: string;
