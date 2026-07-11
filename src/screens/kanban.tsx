@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Kanban as KanbanIcon } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +12,6 @@ import {
   type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { Kanban as KanbanIcon } from 'lucide-react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import { TopBar } from '@/components/top-bar';
@@ -28,6 +28,7 @@ import { useFilterStore } from '@/stores/filter-store';
 import { moveTaskInColumns, findColumnKey, findTaskById } from '@/lib/reorder';
 import { cn } from '@/lib/utils';
 import { type Column, type Task } from '@/lib/data';
+import { useAuth } from '@/auth/auth-context';
 
 const PRIORITY_FILTER_OPTIONS = [
   { value: '', label: 'Todas prioridades' },
@@ -62,12 +63,15 @@ function KanbanColumn({ col, onEditTask }: { col: Column; onEditTask: (task: Tas
 type DialogState = null | { mode: 'create' } | { mode: 'edit'; task: Task };
 
 export function KanbanBoard() {
-  const { data: columns, isLoading, isError } = useColumns();
+  const { activeProject } = useAuth();
+  const projectId = activeProject?.id ?? '';
+  const { data: columns, isLoading, isError } = useColumns(projectId);
   const [dialog, setDialog] = React.useState<DialogState>(null);
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
-  const moveTask = useMoveTask();
+  const moveTask = useMoveTask(projectId);
   const qc = useQueryClient();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const keys = queryKeys(projectId);
 
   const filter = useFilterStore((s) => s.kanban);
   const setFilter = useFilterStore((s) => s.setKanbanFilter);
@@ -78,7 +82,7 @@ export function KanbanBoard() {
 
   function matchTask(t: Task): boolean {
     const q = filter.text.trim().toLowerCase();
-    if (q && !`${t.title} ${t.id}`.toLowerCase().includes(q)) return false;
+    if (q && !`${t.title} ${t.displayId}`.toLowerCase().includes(q)) return false;
     if (filter.priority && t.priority !== filter.priority) return false;
     if (filter.tag && !t.tags.includes(filter.tag)) return false;
     if (filter.assignee && !t.assignees.includes(filter.assignee)) return false;
@@ -100,9 +104,9 @@ export function KanbanBoard() {
     const activeId = event.active.id as string;
     const fromKey = findColumnKey(columns, activeId);
     const toKey = findColumnKey(columns, overId);
-    if (!fromKey || !toKey || fromKey === toKey) return; // só transfere entre colunas ao vivo
+    if (!fromKey || !toKey || fromKey === toKey) return;
     const result = moveTaskInColumns(columns, activeId, overId);
-    if (result) qc.setQueryData(queryKeys.columns, result.columns);
+    if (result) qc.setQueryData(keys.columns, result.columns);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -112,14 +116,14 @@ export function KanbanBoard() {
     const activeId = event.active.id as string;
     const result = moveTaskInColumns(columns, activeId, overId);
     if (!result) return;
-    qc.setQueryData(queryKeys.columns, result.columns);
+    qc.setQueryData(keys.columns, result.columns);
     moveTask.mutate({ taskId: activeId, toColumnKey: result.toColumnKey, toIndex: result.toIndex });
   }
 
   return (
     <>
       <TopBar
-        title="Kanban — Skyline Racer"
+        title={`Kanban — ${activeProject?.name ?? 'Projeto'}`}
         subtitle={`${totalTasks} tarefas ativas`}
         icon={<KanbanIcon size={20} />}
         iconTone="info"
@@ -177,6 +181,7 @@ export function KanbanBoard() {
       <TaskDialog
         open={dialog !== null}
         task={dialog?.mode === 'edit' ? dialog.task : undefined}
+        projectId={projectId}
         onOpenChange={(v) => { if (!v) setDialog(null); }}
       />
     </>

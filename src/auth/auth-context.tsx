@@ -16,22 +16,32 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   activeProject: ActiveProject | null;
+  canInvite: boolean;
+  mustSetPassword: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  completePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const PROJECT_SLUG = 'origem-studio';
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
+// Convite/recuperação chegam com token no hash da URL (#...type=invite|recovery).
+const INITIAL_HASH = typeof window !== 'undefined' ? window.location.hash : '';
+const IS_INVITE_FLOW = /type=(invite|recovery)/.test(INITIAL_HASH);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
   const [accessLoading, setAccessLoading] = React.useState(false);
   const [session, setSession] = React.useState<Session | null>(null);
   const [activeProject, setActiveProject] = React.useState<ActiveProject | null>(null);
+  const [canInvite, setCanInvite] = React.useState(false);
+  const [mustSetPassword, setMustSetPassword] = React.useState(IS_INVITE_FLOW);
   const [accessError, setAccessError] = React.useState('');
 
   async function loadProjectAccess(nextSession: Session | null) {
     setActiveProject(null);
+    setCanInvite(false);
     setAccessError('');
 
     if (!nextSession) return;
@@ -49,6 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccessError('Seu usuario ainda nao esta vinculado ao projeto Origem Studio.');
     } else {
       setActiveProject(data);
+      const { data: membership } = await supabase
+        .from('project_members')
+        .select('role')
+        .eq('project_id', data.id)
+        .eq('user_id', nextSession.user.id)
+        .maybeSingle();
+      setCanInvite(membership?.role === 'owner' || membership?.role === 'admin');
     }
 
     setAccessLoading(false);
@@ -85,19 +102,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       activeProject,
+      canInvite,
+      mustSetPassword,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+      },
+      async completePassword(password) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        setMustSetPassword(false);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
       },
       async signOut() {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         setSession(null);
         setActiveProject(null);
+        setCanInvite(false);
         setAccessError('');
       },
     }),
-    [accessError, accessLoading, activeProject, loading, session],
+    [accessError, accessLoading, activeProject, canInvite, mustSetPassword, loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

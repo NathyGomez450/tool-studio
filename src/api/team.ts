@@ -1,26 +1,32 @@
 import { supabase } from '@/lib/supabase';
 import { type TeamMember } from '@/lib/data';
 
-type DbTeam = {
-  id: string;
-  name: string;
-  role: string;
-  tasks: number;
-};
-
-function dbTeamToMember(m: DbTeam): TeamMember {
-  return {
-    name: m.name,
-    role: m.role,
-    tasks: m.tasks,
-  };
-}
-
-export async function fetchTeam(): Promise<TeamMember[]> {
-  const { data, error } = await supabase
-    .from('team_members')
-    .select('*');
+export async function fetchTeam(projectId: string): Promise<TeamMember[]> {
+  const { data: members, error } = await supabase
+    .from('project_members')
+    .select('user_id, role')
+    .eq('project_id', projectId);
 
   if (error) throw error;
-  return (data ?? []).map(dbTeamToMember);
+
+  const team: TeamMember[] = [];
+  for (const m of members ?? []) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, confirmed')
+      .eq('id', m.user_id)
+      .single();
+
+    // Conta tarefas atribuídas a este membro
+    const name = (profile?.name as string) ?? '—';
+    const { count } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .contains('assignee_names', [name]);
+
+    team.push({ name, role: m.role as string, tasks: count ?? 0, pending: !profile?.confirmed });
+  }
+
+  return team;
 }

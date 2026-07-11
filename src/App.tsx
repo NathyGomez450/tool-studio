@@ -16,8 +16,6 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/auth/auth-context';
-import { useColumns } from '@/queries/hooks';
-import { useBugs } from '@/queries/hooks';
 import { Dashboard } from '@/screens/dashboard';
 import { KanbanBoard } from '@/screens/kanban';
 import { Bugs } from '@/screens/bugs';
@@ -27,7 +25,10 @@ import { Brainstorm } from '@/screens/brainstorm';
 import { Assets } from '@/screens/assets';
 import { Team } from '@/screens/team';
 import { LoginScreen } from '@/screens/login';
+import { SetPasswordScreen } from '@/screens/set-password';
 import { useUiStore } from '@/stores/ui-store';
+import { useColumns, useBugs } from '@/queries/hooks';
+import { LogoMark } from '@/components/logo-mark';
 
 interface NavEntry {
   key: string;
@@ -37,47 +38,49 @@ interface NavEntry {
   Screen: React.ComponentType;
 }
 
+const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
+  {
+    label: 'Visao geral',
+    items: [
+      { key: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={16} />, Screen: Dashboard },
+      { key: 'roadmap', label: 'Roadmap', icon: <ArrowRight size={16} />, Screen: Roadmap },
+    ],
+  },
+  {
+    label: 'Execucao',
+    items: [
+      { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, Screen: KanbanBoard },
+      { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, Screen: Bugs },
+      { key: 'brainstorm', label: 'Brainstorm', icon: <Sparkles size={16} />, Screen: Brainstorm },
+    ],
+  },
+  {
+    label: 'Documentacao',
+    items: [
+      { key: 'gdd', label: 'GDD', icon: <BookOpen size={16} />, Screen: Gdd },
+      { key: 'assets', label: 'Assets', icon: <Boxes size={16} />, Screen: Assets },
+      { key: 'team', label: 'Equipe', icon: <Users size={16} />, Screen: Team },
+    ],
+  },
+];
+
+const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
+
 export default function App() {
-  const { loading, accessLoading, authorized, accessError, user, signOut } = useAuth();
+  const { loading, accessLoading, authorized, accessError, user, signOut, activeProject, mustSetPassword } = useAuth();
   const active = useUiStore((s) => s.activeScreen);
   const setActive = useUiStore((s) => s.setActiveScreen);
   const [query, setQuery] = React.useState('');
 
-  // Buscar contagens do banco
-  const { data: columns } = useColumns();
-  const { data: bugsData } = useBugs();
-
-  // Calcular badges dinamicamente
-  const totalTasks = columns?.reduce((acc, col) => acc + col.tasks.length, 0) ?? 0;
-  const totalBugs = bugsData?.length ?? 0;
-
-  const NAV_GROUPS: { label: string; items: NavEntry[] }[] = [
-    {
-      label: 'Visao geral',
-      items: [
-        { key: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={16} />, Screen: Dashboard },
-        { key: 'roadmap', label: 'Roadmap', icon: <ArrowRight size={16} />, Screen: Roadmap },
-      ],
-    },
-    {
-      label: 'Execucao',
-      items: [
-        { key: 'kanban', label: 'Kanban', icon: <KanbanIcon size={16} />, badge: totalTasks > 0 ? totalTasks : undefined, Screen: KanbanBoard },
-        { key: 'bugs', label: 'Bugs', icon: <Bug size={16} />, badge: totalBugs > 0 ? totalBugs : undefined, Screen: Bugs },
-        { key: 'brainstorm', label: 'Brainstorm', icon: <Sparkles size={16} />, Screen: Brainstorm },
-      ],
-    },
-    {
-      label: 'Documentacao',
-      items: [
-        { key: 'gdd', label: 'GDD', icon: <BookOpen size={16} />, Screen: Gdd },
-        { key: 'assets', label: 'Assets', icon: <Boxes size={16} />, Screen: Assets },
-        { key: 'team', label: 'Equipe', icon: <Users size={16} />, Screen: Team },
-      ],
-    },
-  ];
-
-  const NAV: NavEntry[] = NAV_GROUPS.flatMap((g) => g.items);
+  const projectId = activeProject?.id ?? '';
+  const { data: kanbanColumns } = useColumns(projectId);
+  const { data: bugsData } = useBugs(projectId);
+  const taskCount = (kanbanColumns ?? []).reduce((n, c) => n + c.tasks.length, 0);
+  const bugCount = (bugsData ?? []).length;
+  const badgeByKey: Record<string, number | undefined> = {
+    kanban: taskCount || undefined,
+    bugs: bugCount || undefined,
+  };
   const current = NAV.find((n) => n.key === active) ?? NAV[0];
   const Screen = current.Screen;
 
@@ -98,15 +101,17 @@ export default function App() {
     return <LoginScreen />;
   }
 
+  if (mustSetPassword) {
+    return <SetPasswordScreen />;
+  }
+
   const displayName = user.user_metadata?.name || user.email || 'Equipe';
 
   return (
     <div className="flex h-screen bg-canvas font-sans">
       <aside className="w-[240px] border-r border-border-subtle flex flex-col py-4 shrink-0">
         <div className="flex items-center gap-2 px-4 mb-4">
-          <div className="w-[26px] h-[26px] rounded-lg bg-[var(--accent-500)] flex items-center justify-center font-bold text-[13px] text-[var(--text-on-accent)]">
-            O
-          </div>
+          <LogoMark size={28} />
           <div className="font-bold text-sm tracking-tight text-primary">
             Origem <span className="text-tertiary font-medium">Studio</span>
           </div>
@@ -122,7 +127,7 @@ export default function App() {
             <div key={g.label} className="flex flex-col gap-0.5">
               <div className="px-4 pb-1 text-[10px] font-semibold tracking-wider uppercase text-disabled">{g.label}</div>
               {g.items.map((n) => (
-                <NavItem key={n.key} icon={n.icon} label={n.label} active={active === n.key} badge={n.badge} onClick={() => setActive(n.key)} />
+                <NavItem key={n.key} icon={n.icon} label={n.label} active={active === n.key} badge={badgeByKey[n.key] ?? n.badge} onClick={() => setActive(n.key)} />
               ))}
             </div>
           ))}
@@ -155,3 +160,4 @@ export default function App() {
     </div>
   );
 }
+
