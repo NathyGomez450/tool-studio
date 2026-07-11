@@ -14,6 +14,7 @@ export function DocViewer({ attachment }: { attachment: GddAttachment }) {
 
   React.useEffect(() => {
     let active = true;
+    let objectUrl = '';
     setLoading(true);
     setError('');
     setHtml('');
@@ -30,6 +31,13 @@ export function DocViewer({ attachment }: { attachment: GddAttachment }) {
           const result = await mammoth.convertToHtml({ arrayBuffer: buf });
           if (!active) return;
           setHtml(DOMPurify.sanitize(result.value));
+        } else if (attachment.kind === 'pdf') {
+          // Baixa como blob com tipo pdf → iframe renderiza inline (evita download forçado)
+          const res = await fetch(signed);
+          const buf = await res.arrayBuffer();
+          if (!active) return;
+          objectUrl = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+          setUrl(objectUrl);
         } else {
           setUrl(signed);
         }
@@ -42,6 +50,7 @@ export function DocViewer({ attachment }: { attachment: GddAttachment }) {
 
     return () => {
       active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [attachment.path, attachment.kind]);
 
