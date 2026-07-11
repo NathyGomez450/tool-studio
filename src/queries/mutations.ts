@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 import { createTask, moveTask, updateTask, deleteTask } from '@/api/tasks';
-import { createBug, updateBugStatus, updateBug, deleteBug } from '@/api/bugs';
+import { createBug, updateBugStatus, updateBug, deleteBug, updateBugAssignee, addBugComment } from '@/api/bugs';
 import { createGddSection, updateGddSection, deleteGddSection, uploadGddDoc, removeGddDoc } from '@/api/gdd';
 import { createRoadmapItem, updateRoadmapItem, deleteRoadmapItem } from '@/api/roadmap';
 import {
@@ -91,6 +91,27 @@ export function useDeleteBug(projectId: string) {
   return useMutation({
     mutationFn: (input: { bugId: string }) => deleteBug(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.bugs }),
+  });
+}
+
+export function useUpdateBugAssignee(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { bugId: string; assignee: string }) => updateBugAssignee(projectId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.bugs });
+      qc.invalidateQueries({ queryKey: keys.team });
+    },
+  });
+}
+
+export function useAddBugComment(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { bugId: string; text: string }) => addBugComment(projectId, input),
+    onSuccess: (_data, input) => qc.invalidateQueries({ queryKey: keys.bugComments(input.bugId) }),
   });
 }
 

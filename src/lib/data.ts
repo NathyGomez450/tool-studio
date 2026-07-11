@@ -28,6 +28,13 @@ export interface Bug {
   when: string;        // derivado de created_at
 }
 
+export interface BugComment {
+  id: string;
+  author: string;
+  text: string;
+  when: string;
+}
+
 export interface RoadmapItem {
   id: string;
   title: string;

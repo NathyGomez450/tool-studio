@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 import { fetchColumns } from '@/api/tasks';
-import { fetchBugs } from '@/api/bugs';
+import { fetchBugs, fetchBugComments } from '@/api/bugs';
 import { fetchRoadmap } from '@/api/roadmap';
 import { fetchGddSections } from '@/api/gdd';
 import { fetchAssets } from '@/api/assets';
@@ -17,6 +17,15 @@ export function useColumns(projectId: string) {
 export function useBugs(projectId: string) {
   const keys = queryKeys(projectId);
   return useQuery({ queryKey: keys.bugs, queryFn: () => fetchBugs(projectId), enabled: !!projectId });
+}
+
+export function useBugComments(projectId: string, bugId: string | undefined) {
+  const keys = queryKeys(projectId);
+  return useQuery({
+    queryKey: keys.bugComments(bugId ?? ''),
+    queryFn: () => fetchBugComments(bugId as string),
+    enabled: !!projectId && !!bugId,
+  });
 }
 
 export function useRoadmap(projectId: string) {

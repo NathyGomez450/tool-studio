@@ -3,7 +3,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useCreateBug, useUpdateBug, useDeleteBug } from '@/queries/mutations';
+import { useCreateBug, useUpdateBug, useDeleteBug, useAddBugComment } from '@/queries/mutations';
+import { useBugComments } from '@/queries/hooks';
+import { Avatar } from '@/components/ui/avatar';
 import { type Bug } from '@/lib/data';
 
 const SEVERITIES: { value: Bug['severity']; label: string }[] = [
@@ -28,15 +30,24 @@ export function BugDialog({
   const [title, setTitle] = React.useState('');
   const [severity, setSeverity] = React.useState<Bug['severity']>('medium');
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+  const [commentText, setCommentText] = React.useState('');
   const createBug = useCreateBug(projectId);
   const updateBug = useUpdateBug(projectId);
   const deleteBug = useDeleteBug(projectId);
+  const addComment = useAddBugComment(projectId);
+  const { data: comments } = useBugComments(projectId, open && isEdit ? bug?.id : undefined);
+
+  function submitComment() {
+    if (!bug || !commentText.trim()) return;
+    addComment.mutate({ bugId: bug.id, text: commentText.trim() }, { onSuccess: () => setCommentText('') });
+  }
 
   React.useEffect(() => {
     if (open) {
       setTitle(bug?.title ?? '');
       setSeverity(bug?.severity ?? 'medium');
       setConfirmingDelete(false);
+      setCommentText('');
     }
   }, [open, bug]);
 
@@ -87,6 +98,43 @@ export function BugDialog({
             <label className="text-xs text-tertiary">Severidade</label>
             <Select options={SEVERITIES} value={severity} onChange={(e) => setSeverity(e.target.value as Bug['severity'])} />
           </div>
+
+          {isEdit && (
+            <div className="flex flex-col gap-2 border-t border-border-subtle pt-3 mt-1">
+              <label className="text-xs text-tertiary">Comentários</label>
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-auto pr-1">
+                {(comments ?? []).length === 0 && <p className="text-[12px] text-tertiary">Sem comentários ainda.</p>}
+                {(comments ?? []).map((c) => (
+                  <div key={c.id} className="flex gap-2">
+                    <Avatar name={c.author} size={24} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[12px] font-semibold text-primary truncate">{c.author}</span>
+                        <span className="text-[10px] text-disabled shrink-0">{c.when}</span>
+                      </div>
+                      <p className="text-[13px] text-secondary whitespace-pre-wrap break-words">{c.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Escreva um comentário…"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submitComment();
+                    }
+                  }}
+                />
+                <Button onClick={submitComment} disabled={!commentText.trim() || addComment.isPending}>
+                  {addComment.isPending ? '…' : 'Comentar'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
