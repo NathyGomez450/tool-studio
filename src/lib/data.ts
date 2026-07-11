@@ -113,9 +113,16 @@ export interface DashboardStat {
   value: string;
 }
 
-export interface SprintProgress {
+export interface KanbanBucketCount {
   label: string;
-  value: number;
+  count: number;
+}
+
+export interface RoadmapProgress {
+  done: number;
+  doing: number;
+  planned: number;
+  total: number;
 }
 
 export interface DashboardActivity {
@@ -126,6 +133,7 @@ export interface DashboardActivity {
 
 export interface DashboardData {
   stats: DashboardStat[];
-  sprint: SprintProgress[];
+  kanban: KanbanBucketCount[];
+  roadmap: RoadmapProgress;
   activity: DashboardActivity[];
 }
