@@ -12,7 +12,6 @@ import {
 } from '@/queries/mutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
 import DOMPurify from 'dompurify';
@@ -206,7 +205,11 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
                     {section.attachments.map((att) => (
                       <div key={att.path} className="group flex items-center gap-2.5 rounded-md border border-border-subtle bg-surface px-3 py-2">
                         <FileText size={15} className="text-tertiary shrink-0" />
-                        <button type="button" onClick={() => setViewerDoc(att)} className="flex-1 text-left text-[13px] text-secondary hover:text-primary truncate">
+                        <button
+                          type="button"
+                          onClick={() => setViewerDoc(viewerDoc?.path === att.path ? null : att)}
+                          className={`flex-1 text-left text-[13px] truncate ${viewerDoc?.path === att.path ? 'text-primary font-medium' : 'text-secondary hover:text-primary'}`}
+                        >
                           {att.name}
                         </button>
                         <span className="text-[11px] text-disabled uppercase shrink-0">{att.kind}</span>
@@ -222,21 +225,23 @@ function GddContent({ sections, projectId, title }: { sections: GddSection[]; pr
                     ))}
                   </div>
                 )}
+
+                {viewerDoc && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[13px] font-semibold text-primary truncate">{viewerDoc.name}</span>
+                      <Button variant="secondary" size="sm" onClick={() => setViewerDoc(null)}>Fechar</Button>
+                    </div>
+                    <React.Suspense fallback={<div className="h-[40vh] flex items-center justify-center text-[13px] text-tertiary">Abrindo visualizador…</div>}>
+                      <DocViewer attachment={viewerDoc} />
+                    </React.Suspense>
+                  </div>
+                )}
               </div>
             </>
           )}
         </div>
       </div>
-
-      <Dialog open={!!viewerDoc} onOpenChange={(o) => !o && setViewerDoc(null)}>
-        {viewerDoc && (
-          <DialogContent title={viewerDoc.name} className="w-[860px]">
-            <React.Suspense fallback={<div className="h-[60vh] flex items-center justify-center text-[13px] text-tertiary">Abrindo visualizador…</div>}>
-              <DocViewer attachment={viewerDoc} />
-            </React.Suspense>
-          </DialogContent>
-        )}
-      </Dialog>
     </>
   );
 }
