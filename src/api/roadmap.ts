@@ -1,13 +1,19 @@
 import { supabase } from '@/lib/supabase';
-import { type RoadmapItem, type RoadmapQuarter } from '@/lib/data';
+import { type RoadmapItem, type RoadmapStatus, type RoadmapBucket } from '@/lib/data';
 
-function deriveStatus(items: RoadmapItem[]): RoadmapQuarter['status'] {
-  if (items.some((i) => i.status === 'em andamento')) return 'em andamento';
-  if (items.length > 0 && items.every((i) => i.status === 'concluído')) return 'concluído';
-  return 'planejado';
+function rowToItem(r: Record<string, unknown>): RoadmapItem {
+  return {
+    id: r.id as string,
+    title: r.title as string,
+    status: (r.status as RoadmapStatus) ?? 'planejado',
+    quarter: (r.quarter as string) ?? '',
+    bucket: (r.bucket as RoadmapBucket) ?? null,
+    description: (r.description as string) ?? '',
+    assignee: (r.assignee as string) ?? '—',
+  };
 }
 
-export async function fetchRoadmap(projectId: string): Promise<RoadmapQuarter[]> {
+export async function fetchRoadmap(projectId: string): Promise<RoadmapItem[]> {
   const { data, error } = await supabase
     .from('roadmap_items')
     .select('*')
@@ -15,42 +21,45 @@ export async function fetchRoadmap(projectId: string): Promise<RoadmapQuarter[]>
     .order('position');
 
   if (error) throw error;
-
-  const byQuarter = new Map<string, RoadmapItem[]>();
-  for (const r of data ?? []) {
-    const q = (r.quarter as string) ?? 'Sem trimestre';
-    if (!byQuarter.has(q)) byQuarter.set(q, []);
-    byQuarter.get(q)!.push({
-      id: r.id as string,
-      title: r.title as string,
-      status: (r.status as RoadmapItem['status']) ?? 'planejado',
-    });
-  }
-
-  return Array.from(byQuarter.entries()).map(([quarter, items]) => ({
-    quarter,
-    items,
-    status: deriveStatus(items),
-  }));
+  return (data ?? []).map(rowToItem);
 }
 
-export async function createRoadmapItem(
-  projectId: string,
-  input: { quarter: string; title: string; status: RoadmapItem['status'] },
-): Promise<void> {
-  const { error } = await supabase
-    .from('roadmap_items')
-    .insert({ project_id: projectId, quarter: input.quarter, title: input.title, status: input.status });
+type RoadmapInput = {
+  quarter: string;
+  title: string;
+  status: RoadmapStatus;
+  bucket?: RoadmapBucket;
+  description?: string;
+  assignee?: string;
+};
+
+export async function createRoadmapItem(projectId: string, input: RoadmapInput): Promise<void> {
+  const { error } = await supabase.from('roadmap_items').insert({
+    project_id: projectId,
+    quarter: input.quarter,
+    title: input.title,
+    status: input.status,
+    bucket: input.bucket ?? null,
+    description: input.description ?? null,
+    assignee: input.assignee ?? '—',
+  });
   if (error) throw error;
 }
 
 export async function updateRoadmapItem(
   _projectId: string,
-  input: { id: string; title: string; status: RoadmapItem['status']; quarter: string },
+  input: { id: string } & RoadmapInput,
 ): Promise<void> {
   const { error } = await supabase
     .from('roadmap_items')
-    .update({ title: input.title, status: input.status, quarter: input.quarter })
+    .update({
+      title: input.title,
+      status: input.status,
+      quarter: input.quarter,
+      bucket: input.bucket ?? null,
+      description: input.description ?? null,
+      assignee: input.assignee ?? '—',
+    })
     .eq('id', input.id);
   if (error) throw error;
 }

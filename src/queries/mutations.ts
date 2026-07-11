@@ -15,7 +15,16 @@ import {
 } from '@/api/brainstorm';
 import { uploadAsset, deleteAsset } from '@/api/assets';
 import { inviteUser } from '@/api/invites';
-import { type Task, type Bug, type RoadmapItem } from '@/lib/data';
+import { type Task, type Bug, type RoadmapStatus, type RoadmapBucket } from '@/lib/data';
+
+type RoadmapItemInput = {
+  quarter: string;
+  title: string;
+  status: RoadmapStatus;
+  bucket?: RoadmapBucket;
+  description?: string;
+  assignee?: string;
+};
 
 export function useCreateTask(projectId: string) {
   const qc = useQueryClient();
@@ -165,8 +174,7 @@ export function useCreateRoadmapItem(projectId: string) {
   const qc = useQueryClient();
   const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: (input: { quarter: string; title: string; status: RoadmapItem['status'] }) =>
-      createRoadmapItem(projectId, input),
+    mutationFn: (input: RoadmapItemInput) => createRoadmapItem(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
   });
 }
@@ -175,8 +183,7 @@ export function useUpdateRoadmapItem(projectId: string) {
   const qc = useQueryClient();
   const keys = queryKeys(projectId);
   return useMutation({
-    mutationFn: (input: { id: string; title: string; status: RoadmapItem['status']; quarter: string }) =>
-      updateRoadmapItem(projectId, input),
+    mutationFn: (input: { id: string } & RoadmapItemInput) => updateRoadmapItem(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.roadmap }),
   });
 }

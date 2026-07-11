@@ -35,15 +35,22 @@ export interface BugComment {
   when: string;
 }
 
+export type RoadmapStatus = 'em andamento' | 'planejado' | 'concluído';
+export type RoadmapBucket = 'now' | 'next' | 'later' | null;
+
 export interface RoadmapItem {
   id: string;
   title: string;
-  status: 'em andamento' | 'planejado' | 'concluído';
+  status: RoadmapStatus;
+  quarter: string;
+  bucket: RoadmapBucket;
+  description: string;
+  assignee: string;
 }
 
 export interface RoadmapQuarter {
   quarter: string;
-  status: 'em andamento' | 'planejado' | 'concluído';
+  status: RoadmapStatus;
   items: RoadmapItem[];
 }
 
