@@ -1,12 +1,14 @@
 import * as React from 'react';
-import { Boxes, Plus, Trash2 } from 'lucide-react';
+import { Boxes, Plus, Trash2, Box } from 'lucide-react';
 import { TopBar } from '@/components/top-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAssets } from '@/queries/hooks';
 import { useDeleteAsset } from '@/queries/mutations';
 import { AssetUploadDialog } from '@/components/dialogs/asset-upload-dialog';
 import { ScreenLoading, ScreenError, ScreenEmpty } from '@/components/screen-state';
+import { type Asset } from '@/lib/data';
 import { useAuth } from '@/auth/auth-context';
 
 const typeTone: Record<string, any> = {
@@ -18,6 +20,13 @@ const typeTone: Record<string, any> = {
   Animação: 'info',
 };
 
+const ModelViewer = React.lazy(() =>
+  import('@/components/model-viewer').then((m) => ({ default: m.ModelViewer })),
+);
+
+const isImage = (name: string) => /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(name);
+const is3D = (name: string) => /\.obj$/i.test(name);
+
 export function Assets() {
   const { activeProject } = useAuth();
   const projectId = activeProject?.id ?? '';
@@ -25,6 +34,7 @@ export function Assets() {
   const deleteAsset = useDeleteAsset(projectId);
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [confirmId, setConfirmId] = React.useState<string | null>(null);
+  const [viewer, setViewer] = React.useState<Asset | null>(null);
 
   function onDelete(id: string, url: string) {
     if (confirmId !== id) {
@@ -56,25 +66,33 @@ export function Assets() {
                 <button
                   type="button"
                   onClick={() => onDelete(a.id, a.url)}
-                  className={`absolute top-2 right-2 rounded-md px-1.5 py-1 text-[11px] flex items-center gap-1 transition-opacity ${
+                  className={`absolute top-2 right-2 z-10 rounded-md px-1.5 py-1 text-[11px] flex items-center gap-1 transition-opacity ${
                     confirmId === a.id ? 'bg-[var(--danger-soft)] text-[var(--red-400)] opacity-100' : 'opacity-0 group-hover:opacity-100 text-tertiary hover:text-[var(--red-400)]'
                   }`}
                   title="Excluir asset"
                 >
                   <Trash2 size={13} /> {confirmId === a.id ? 'Confirmar?' : ''}
                 </button>
-                <a
-                  href={a.url || undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-20 rounded-sm bg-surface3 flex items-center justify-center overflow-hidden text-disabled text-[11px]"
-                >
-                  {/\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(a.name) && a.url ? (
+
+                {isImage(a.name) && a.url ? (
+                  <a href={a.url} target="_blank" rel="noreferrer" className="h-20 rounded-sm bg-surface3 flex items-center justify-center overflow-hidden">
                     <img src={a.url} alt={a.name} className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <span className="uppercase">{a.name.split('.').pop() || 'arquivo'}</span>
-                  )}
-                </a>
+                  </a>
+                ) : is3D(a.name) && a.url ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewer(a)}
+                    className="h-20 rounded-sm bg-surface3 flex items-center justify-center gap-1.5 text-[11px] text-secondary hover:text-primary hover:bg-[var(--bg-hover)] transition-colors"
+                    title="Ver modelo 3D"
+                  >
+                    <Box size={16} /> Ver em 3D
+                  </button>
+                ) : (
+                  <a href={a.url || undefined} target="_blank" rel="noreferrer" className="h-20 rounded-sm bg-surface3 flex items-center justify-center text-disabled text-[11px] uppercase">
+                    {a.name.split('.').pop() || 'arquivo'}
+                  </a>
+                )}
+
                 <div className="text-xs font-mono text-primary truncate">{a.name}</div>
                 <div className="flex justify-between items-center">
                   <Badge tone={typeTone[a.type] ?? 'neutral'}>{a.type}</Badge>
@@ -86,7 +104,19 @@ export function Assets() {
           </div>
         )}
       </div>
+
       <AssetUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} projectId={projectId} />
+
+      <Dialog open={!!viewer} onOpenChange={(o) => !o && setViewer(null)}>
+        {viewer && (
+          <DialogContent title={viewer.name} className="w-[680px]">
+            <React.Suspense fallback={<div className="h-[360px] flex items-center justify-center text-[13px] text-tertiary">Carregando visualizador…</div>}>
+              <ModelViewer url={viewer.url} />
+            </React.Suspense>
+            <p className="mt-2 text-[11px] text-tertiary">Arraste para girar · scroll para zoom</p>
+          </DialogContent>
+        )}
+      </Dialog>
     </>
   );
 }
