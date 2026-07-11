@@ -24,11 +24,14 @@ export async function fetchBrainstormNotes(projectId: string): Promise<Brainstor
 export async function createBrainstormNote(
   projectId: string,
   input: { text: string; color: string; x: number; y: number },
-): Promise<void> {
-  const { error } = await supabase
+): Promise<BrainstormNote> {
+  const { data, error } = await supabase
     .from('brainstorm_notes')
-    .insert({ project_id: projectId, text: input.text, color: input.color, x: input.x, y: input.y });
+    .insert({ project_id: projectId, text: input.text, color: input.color, x: input.x, y: input.y })
+    .select()
+    .single();
   if (error) throw error;
+  return rowToNote(data);
 }
 
 export async function updateBrainstormNote(
@@ -54,10 +57,20 @@ export async function deleteBrainstormNote(_projectId: string, input: { id: stri
 export async function fetchBrainstormEdges(projectId: string): Promise<BrainstormEdge[]> {
   const { data, error } = await supabase
     .from('brainstorm_edges')
-    .select('id, source, target')
+    .select('id, source, target, label')
     .eq('project_id', projectId);
   if (error) throw error;
-  return (data ?? []).map((e) => ({ id: e.id as string, source: e.source as string, target: e.target as string }));
+  return (data ?? []).map((e) => ({
+    id: e.id as string,
+    source: e.source as string,
+    target: e.target as string,
+    label: (e.label as string) ?? undefined,
+  }));
+}
+
+export async function updateBrainstormEdge(_projectId: string, input: { id: string; label: string }): Promise<void> {
+  const { error } = await supabase.from('brainstorm_edges').update({ label: input.label }).eq('id', input.id);
+  if (error) throw error;
 }
 
 export async function createBrainstormEdge(

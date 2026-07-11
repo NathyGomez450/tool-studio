@@ -9,6 +9,7 @@ create table if not exists public.brainstorm_edges (
   target     uuid not null references public.brainstorm_notes(id) on delete cascade,
   created_at timestamptz not null default now()
 );
+alter table public.brainstorm_edges add column if not exists label text; -- rótulo da conexão
 alter table public.brainstorm_edges enable row level security;
 drop policy if exists "members manage brainstorm_edges" on public.brainstorm_edges;
 create policy "members manage brainstorm_edges" on public.brainstorm_edges for all

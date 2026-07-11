@@ -10,6 +10,7 @@ import {
   deleteBrainstormNote,
   createBrainstormEdge,
   deleteBrainstormEdge,
+  updateBrainstormEdge,
 } from '@/api/brainstorm';
 import { uploadAsset, deleteAsset } from '@/api/assets';
 import { inviteUser } from '@/api/invites';
@@ -213,6 +214,15 @@ export function useDeleteBrainstormEdge(projectId: string) {
   const keys = queryKeys(projectId);
   return useMutation({
     mutationFn: (input: { id: string }) => deleteBrainstormEdge(projectId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstormEdges }),
+  });
+}
+
+export function useUpdateBrainstormEdge(projectId: string) {
+  const qc = useQueryClient();
+  const keys = queryKeys(projectId);
+  return useMutation({
+    mutationFn: (input: { id: string; label: string }) => updateBrainstormEdge(projectId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.brainstormEdges }),
   });
 }

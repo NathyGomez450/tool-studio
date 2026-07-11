@@ -84,6 +84,7 @@ export interface BrainstormEdge {
   id: string;
   source: string;
   target: string;
+  label?: string;
 }
 
 export interface DashboardStat {
